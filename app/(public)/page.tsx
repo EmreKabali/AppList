@@ -20,11 +20,12 @@ export default async function HomePage({
 
   // Direct Supabase query instead of API fetch
   const supabase = await createClient();
-  const { data: apps = [] } = await supabase
+  const { data } = await supabase
     .from("apps")
     .select("*")
     .eq("status", "approved")
     .order("created_at", { ascending: false });
+  const apps: App[] = data ?? [];
 
   const now = Date.now();
   const oneDayMs = 1000 * 60 * 60 * 24;

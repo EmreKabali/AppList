@@ -20,14 +20,87 @@
 
 > **Legend:** `file.ts <- A.tsx, B.tsx` = This file is **imported by** A.tsx and B.tsx.
 > Directories with `[N files: ...]` are summarized to reduce size.
-> [STATS] Showing 0 files. 1 dirs summarized, 0 dirs excluded (node_modules, etc.)
+> [STATS] Showing 35 files. 2 dirs summarized, 3 dirs excluded (node_modules, etc.)
 
 
 ```
-docs/ [1 files: 1 .md]
+.claude/
+  settings.local.json
+.serena/
+  .gitignore
+  project.yml
+app/
+  (admin)/
+    admin/
+      apps/
+        page.tsx
+      page.tsx
+      users/
+        page.tsx
+    login/
+      page.tsx
+  (public)/
+    page.tsx
+    submit/
+      page.tsx
+  api/
+    admin/
+      apps/
+        route.ts
+      users/
+        route.ts
+    apps/
+      route.ts
+      submit/
+        route.ts
+  globals.css
+  layout.tsx
+components/
+  app-card.tsx ← page.tsx
+  countdown-badge.tsx ← app-card.tsx
+  filter-tabs.tsx ← page.tsx
+  header.tsx ← page.tsx
+  stats-card.tsx ← page.tsx, page.tsx
+  ui/
+    badge.tsx ← app-card.tsx, countdown-badge.tsx
+    button.tsx ← header.tsx
+    card.tsx ← app-card.tsx, stats-card.tsx
+    input.tsx ← page.tsx, page.tsx, page.tsx
+    tabs.tsx
+docs/ [2 files: 2 .md]
+lib/
+  api.ts ← page.tsx, page.tsx, page.tsx
+  constants.ts ← route.ts, route.ts, route.ts +3 more
+  supabase/
+    client.ts ← index.ts
+    index.ts ← middleware.ts
+    middleware.ts ← middleware.ts
+    server.ts ← index.ts
+  utils.ts ← route.ts, page.tsx, page.tsx
+supabase/
+  migrations/ [3 files: 3 .sql]
+  seed.sql
+types/
+  database.ts ← app-card.tsx, api.ts, client.ts +5 more
+  index.ts ← middleware.ts
 ```
 
 
+## File Dependencies
+
+> Scanned 34 files
+
+### High-Impact Files
+
+*Files imported by multiple other files:*
+
+| File | Imported by |
+|------|-------------|
+| `src/types/database` | 8 files |
+| `src/lib/supabase/server` | 6 files |
+| `src/lib/constants` | 6 files |
+| `src/types` | 5 files |
+| `src/components/ui/card` | 5 files |
 
 
 ---

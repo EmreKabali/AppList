@@ -30,10 +30,11 @@ export default async function AdminDashboardPage() {
   // }
 
   // Direct Supabase query instead of API fetch
-  const { data: apps = [] } = await supabase
+  const { data } = await supabase
     .from("apps")
     .select("*")
     .order("created_at", { ascending: false });
+  const apps: App[] = data ?? [];
 
   const stats = {
     total: apps.length,

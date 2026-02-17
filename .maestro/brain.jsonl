@@ -1,0 +1,3 @@
+{"type":"tech_stack","ts":"2026-02-17 08:38:02","project_name":"unknown","project_version":"0.0.0","description":"","frameworks":["next.js","react"],"framework_versions":{"next":"16.1.6","react":"19.2.4","typescript":"5.9.3","tailwindcss":"4.1.18"},"key_deps":["Styling (Tailwind)","Backend (Supabase)"],"dev_tools":["TypeScript","TypeScript (strict)","ESLint"],"package_manager":"npm","node_version":null,"module_type":"commonjs"}
+{"type":"architecture","ts":"2026-02-17 08:38:02","project_type":"single-package","patterns":["App Router (Next.js 13+)","API Routes"],"key_directories":["app/","components/","lib/"],"entry_points":[]}
+{"type":"scripts","ts":"2026-02-17 08:38:02","available":{}}
