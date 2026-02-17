@@ -33,10 +33,10 @@ export function AppCard({ app }: Readonly<AppCardProps>) {
   const platformLabel = getPlatformLabel();
 
   return (
-    <Card className="group p-5 hover:shadow-xl hover:shadow-indigo-500/10 transition-all duration-300 border-gray-100 dark:border-gray-800 bg-white/50 dark:bg-gray-900/50 backdrop-blur-sm hover:border-indigo-500/30">
+    <Card className="group p-5 hover:shadow-xl hover:shadow-indigo-500/10 transition-all duration-300 border-gray-100 bg-white/50 backdrop-blur-sm hover:border-indigo-500/30">
       <div className="flex items-start gap-5">
         {/* Sol: İkon Bölümü */}
-        <div className="relative h-16 w-16 rounded-2xl border border-gray-100 dark:border-gray-800 bg-gray-50 dark:bg-gray-800 overflow-hidden flex-shrink-0 shadow-sm group-hover:scale-110 group-hover:rotate-2 transition-transform duration-500">
+        <div className="relative h-16 w-16 rounded-2xl border border-gray-100 bg-gray-50 overflow-hidden flex-shrink-0 shadow-sm group-hover:scale-110 group-hover:rotate-2 transition-transform duration-500">
           {app.icon_url ? (
             // eslint-disable-next-line @next/next/no-img-element
             <img
@@ -54,11 +54,11 @@ export function AppCard({ app }: Readonly<AppCardProps>) {
         {/* Orta/Sağ: İçerik Bölümü */}
         <div className="flex-1 min-w-0 space-y-3">
           <div className="flex flex-col gap-1">
-            <h3 className="text-lg font-bold text-gray-900 dark:text-gray-100 leading-tight group-hover:text-indigo-600 dark:group-hover:text-indigo-400 transition-colors truncate">
+            <h3 className="text-lg font-bold text-gray-900 leading-tight group-hover:text-indigo-600 transition-colors truncate">
               {app.name}
             </h3>
             {app.description && (
-              <p className="text-sm text-gray-500 dark:text-gray-400 line-clamp-2 leading-relaxed">
+              <p className="text-sm text-gray-500 line-clamp-2 leading-relaxed">
                 {app.description}
               </p>
             )}
@@ -72,7 +72,7 @@ export function AppCard({ app }: Readonly<AppCardProps>) {
               )}
 
               {platformLabel && (
-                <Badge variant="default" className="bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-300 border-none font-medium">
+                <Badge variant="default" className="bg-gray-100 text-gray-600 border-none font-medium">
                   {platformLabel}
                 </Badge>
               )}
