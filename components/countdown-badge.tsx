@@ -16,7 +16,7 @@ function calculateDaysRemaining(endDate: string): number {
   return diffDays;
 }
 
-export function CountdownBadge({ endDate }: CountdownBadgeProps) {
+export function CountdownBadge({ endDate }: Readonly<CountdownBadgeProps>) {
   const daysRemaining = calculateDaysRemaining(endDate);
 
   if (daysRemaining < 0) {
@@ -24,12 +24,12 @@ export function CountdownBadge({ endDate }: CountdownBadgeProps) {
   }
 
   if (daysRemaining <= 4) {
-    return <Badge variant="danger">{daysRemaining} gun</Badge>;
+    return <Badge variant="danger">{daysRemaining} gün</Badge>;
   }
 
   if (daysRemaining <= 9) {
-    return <Badge variant="warning">{daysRemaining} gun</Badge>;
+    return <Badge variant="warning">{daysRemaining} gün</Badge>;
   }
 
-  return <Badge variant="success">{daysRemaining} gun</Badge>;
+  return <Badge variant="success">{daysRemaining} gün</Badge>;
 }

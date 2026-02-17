@@ -12,9 +12,13 @@ export interface Database {
       apps: {
         Row: {
           id: string;
+          submission_type: "test" | "live";
+          platform: "android" | "ios" | null;
           name: string;
           play_url: string | null;
           test_url: string | null;
+          description: string | null;
+          icon_url: string | null;
           start_date: string | null;
           end_date: string | null;
           status: "pending" | "approved" | "rejected";
@@ -23,9 +27,13 @@ export interface Database {
         };
         Insert: {
           id?: string;
+          submission_type?: "test" | "live";
+          platform?: "android" | "ios" | null;
           name: string;
           play_url?: string | null;
           test_url?: string | null;
+          description?: string | null;
+          icon_url?: string | null;
           start_date?: string | null;
           end_date?: string | null;
           status?: "pending" | "approved" | "rejected";
@@ -34,9 +42,13 @@ export interface Database {
         };
         Update: {
           id?: string;
+          submission_type?: "test" | "live";
+          platform?: "android" | "ios" | null;
           name?: string;
           play_url?: string | null;
           test_url?: string | null;
+          description?: string | null;
+          icon_url?: string | null;
           start_date?: string | null;
           end_date?: string | null;
           status?: "pending" | "approved" | "rejected";
@@ -47,6 +59,7 @@ export interface Database {
       admin_users: {
         Row: {
           id: string;
+          auth_user_id: string | null;
           email: string;
           password_hash: string;
           role: "admin" | "super_admin";
@@ -55,6 +68,7 @@ export interface Database {
         };
         Insert: {
           id?: string;
+          auth_user_id?: string | null;
           email: string;
           password_hash: string;
           role?: "admin" | "super_admin";
@@ -63,6 +77,7 @@ export interface Database {
         };
         Update: {
           id?: string;
+          auth_user_id?: string | null;
           email?: string;
           password_hash?: string;
           role?: "admin" | "super_admin";

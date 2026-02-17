@@ -1,22 +1,24 @@
 import type { Metadata } from "next";
-import { Inter } from "next/font/google";
+import { GeistSans } from "geist/font/sans";
+import { GeistMono } from "geist/font/mono";
 import "./globals.css";
 
-const inter = Inter({ subsets: ["latin"] });
 
 export const metadata: Metadata = {
-  title: "AppList",
-  description: "Track your apps across devices",
+  title: "AppList - Track Your Apps",
+  description: "Discover, track, and manage your favorite applications across all devices",
 };
 
 export default function RootLayout({
   children,
-}: {
+}: Readonly<{
   children: React.ReactNode;
-}) {
+}>) {
   return (
-    <html lang="en">
-      <body className={inter.className}>{children}</body>
+    <html lang="tr" suppressHydrationWarning>
+      <body className={`${GeistSans.variable} ${GeistMono.variable} font-sans antialiased`}>
+        {children}
+      </body>
     </html>
   );
 }

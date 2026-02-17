@@ -15,6 +15,8 @@ dist/
 npm-debug.log*
 yarn-debug.log*
 yarn-error.log*
+dev.log
+nul
 
 # Local env files
 .env
@@ -39,3 +41,6 @@ next-env.d.ts
 # OS
 .DS_Store
 Thumbs.db
+
+# Local planning notes
+lint-fixes.md

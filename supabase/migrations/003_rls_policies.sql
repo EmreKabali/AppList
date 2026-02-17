@@ -11,7 +11,7 @@ CREATE POLICY "Admins can view all apps"
     USING (
         EXISTS (
             SELECT 1 FROM public.admin_users
-            WHERE email = auth.jwt() ->> 'email'
+            WHERE id = auth.uid()
         )
     );
 
@@ -26,7 +26,7 @@ CREATE POLICY "Admins can update apps"
     USING (
         EXISTS (
             SELECT 1 FROM public.admin_users
-            WHERE email = auth.jwt() ->> 'email'
+            WHERE id = auth.uid()
         )
     );
 
@@ -36,7 +36,7 @@ CREATE POLICY "Admins can delete apps"
     USING (
         EXISTS (
             SELECT 1 FROM public.admin_users
-            WHERE email = auth.jwt() ->> 'email'
+            WHERE id = auth.uid()
         )
     );
 
@@ -48,7 +48,7 @@ CREATE POLICY "Super admins can manage admin users"
     USING (
         EXISTS (
             SELECT 1 FROM public.admin_users au
-            WHERE au.email = auth.jwt() ->> 'email'
+            WHERE au.id = auth.uid()
             AND au.role = 'super_admin'
         )
     );
@@ -59,6 +59,6 @@ CREATE POLICY "Admins can view admin users"
     USING (
         EXISTS (
             SELECT 1 FROM public.admin_users
-            WHERE email = auth.jwt() ->> 'email'
+            WHERE id = auth.uid()
         )
     );

@@ -9,10 +9,10 @@ interface ButtonProps extends ButtonHTMLAttributes<HTMLButtonElement> {
 }
 
 const variantStyles: Record<ButtonVariant, string> = {
-  default: "bg-gray-100 text-gray-700 hover:bg-gray-200",
-  primary: "bg-indigo-600 text-white hover:bg-indigo-700",
-  outline: "border border-gray-300 text-gray-700 hover:bg-gray-50",
-  ghost: "text-gray-700 hover:bg-gray-100",
+  default: "bg-[var(--muted)] text-[var(--muted-foreground)] hover:bg-[var(--muted-hover)]",
+  primary: "bg-[var(--primary)] text-[var(--primary-foreground)] hover:opacity-90 shadow-sm",
+  outline: "border border-[var(--border)] text-[var(--foreground)] hover:bg-[var(--muted)]",
+  ghost: "text-[var(--foreground)] hover:bg-[var(--muted)]",
   danger: "bg-red-500 text-white hover:bg-red-600",
 };
 
@@ -27,7 +27,7 @@ export const Button = forwardRef<HTMLButtonElement, ButtonProps>(
     return (
       <button
         ref={ref}
-        className={`inline-flex items-center justify-center rounded-md font-medium transition-colors focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2 disabled:opacity-50 disabled:cursor-not-allowed ${variantStyles[variant]} ${sizeStyles[size]} ${className}`}
+        className={`inline-flex items-center justify-center rounded-lg font-medium transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-[var(--ring)] focus:ring-offset-2 focus:ring-offset-[var(--background)] disabled:opacity-50 disabled:cursor-not-allowed active:scale-[0.98] ${variantStyles[variant]} ${sizeStyles[size]} ${className}`}
         {...props}
       >
         {children}

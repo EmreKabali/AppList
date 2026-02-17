@@ -28,10 +28,14 @@ export async function getApps(params?: { page?: number; limit?: number }) {
 }
 
 export async function submitApp(data: {
+  submission_type: "live" | "test";
+  platform?: "android" | "ios";
   name: string;
-  play_url: string;
-  test_url?: string;
-  start_date: string;
+  play_url?: string;
+  description?: string;
+  icon_url: string;
+  start_date?: string;
+  end_date?: string;
 }) {
   return fetchApi<App>("/apps/submit", {
     method: "POST",
@@ -43,11 +47,17 @@ export async function getAdminApps(params?: {
   page?: number;
   limit?: number;
   status?: string;
+  q?: string;
+  submission_type?: "live" | "test";
+  platform?: "android" | "ios";
 }) {
   const searchParams = new URLSearchParams();
   if (params?.page) searchParams.set("page", params.page.toString());
   if (params?.limit) searchParams.set("limit", params.limit.toString());
   if (params?.status) searchParams.set("status", params.status);
+  if (params?.q) searchParams.set("q", params.q);
+  if (params?.submission_type) searchParams.set("submission_type", params.submission_type);
+  if (params?.platform) searchParams.set("platform", params.platform);
 
   const query = searchParams.toString() ? `?${searchParams.toString()}` : "";
   return fetchApi<PaginatedResponse<App>>(`/admin/apps${query}`);
@@ -60,13 +70,39 @@ export async function updateAppStatus(id: string, status: string) {
   });
 }
 
+export async function updateAdminApp(
+  id: string,
+  updates: {
+    submission_type?: "live" | "test";
+    platform?: "android" | "ios" | null;
+    name?: string;
+    play_url?: string | null;
+    description?: string | null;
+    icon_url?: string | null;
+    start_date?: string | null;
+    end_date?: string | null;
+    status?: string;
+  }
+) {
+  return fetchApi<App>("/admin/apps", {
+    method: "PATCH",
+    body: JSON.stringify({ id, ...updates }),
+  });
+}
+
+export async function deleteAdminApp(id: string) {
+  return fetchApi<void>(`/admin/apps?id=${id}`, {
+    method: "DELETE",
+  });
+}
+
 export async function getAdminUsers(params?: { page?: number; limit?: number }) {
   const searchParams = new URLSearchParams();
   if (params?.page) searchParams.set("page", params.page.toString());
   if (params?.limit) searchParams.set("limit", params.limit.toString());
 
   const query = searchParams.toString() ? `?${searchParams.toString()}` : "";
-  return fetchApi<PaginatedResponse<Omit<AdminUser, "password_hash">>>(`/admin/users${query}`);
+  return fetchApi<PaginatedResponse<Omit<AdminUser, "password_hash">> & { currentRole: "admin" | "super_admin" }>(`/admin/users${query}`);
 }
 
 export async function createAdminUser(data: {

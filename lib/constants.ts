@@ -6,7 +6,8 @@ export const APP_STATUS = {
 
 export const ADMIN_ROLES = {
   SUPER_ADMIN: "super_admin",
-  SUB_ADMIN: "sub_admin",
+  ADMIN: "admin",
+  SUB_ADMIN: "admin",
 } as const;
 
 export const APP_LISTING_DURATION_DAYS = 14;
