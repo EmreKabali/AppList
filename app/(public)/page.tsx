@@ -7,6 +7,8 @@ import type { App } from "@/types/database";
 
 type ViewType = "live" | "active-test" | "expired-test";
 
+export const revalidate = 60; // Revalidate every 60 seconds
+
 export default async function HomePage({
   searchParams,
 }: Readonly<{

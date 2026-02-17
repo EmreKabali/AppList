@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, FormEvent } from "react";
 import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -53,7 +53,7 @@ export default function SubmitPage() {
     }
   };
 
-  const handleSubmit = async (e: React.FormEvent) => {
+  const handleSubmit = async (e: FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     setLoading(true);
     setError("");
@@ -128,8 +128,8 @@ export default function SubmitPage() {
                     type="button"
                     onClick={() => setSubmissionType("test")}
                     className={`rounded-lg border px-4 py-3 text-left transition-all duration-200 ${submissionType === "test"
-                        ? "border-[var(--primary)] bg-indigo-50"
-                        : "border-[var(--border)] bg-[var(--background)] hover:bg-[var(--muted)]"
+                      ? "border-[var(--primary)] bg-indigo-50"
+                      : "border-[var(--border)] bg-[var(--background)] hover:bg-[var(--muted)]"
                       }`}
                   >
                     <p className="font-medium text-gray-900">Test</p>
@@ -139,8 +139,8 @@ export default function SubmitPage() {
                     type="button"
                     onClick={() => setSubmissionType("live")}
                     className={`rounded-lg border px-4 py-3 text-left transition-all duration-200 ${submissionType === "live"
-                        ? "border-[var(--primary)] bg-indigo-50"
-                        : "border-[var(--border)] bg-[var(--background)] hover:bg-[var(--muted)]"
+                      ? "border-[var(--primary)] bg-indigo-50"
+                      : "border-[var(--border)] bg-[var(--background)] hover:bg-[var(--muted)]"
                       }`}
                   >
                     <p className="font-medium text-gray-900">Yayında</p>
@@ -166,8 +166,8 @@ export default function SubmitPage() {
                         type="button"
                         onClick={() => setFormData((prev) => ({ ...prev, platform: "android" }))}
                         className={`rounded-lg border px-4 py-3 text-left transition-all duration-200 ${formData.platform === "android"
-                            ? "border-[var(--primary)] bg-indigo-50"
-                            : "border-[var(--border)] bg-[var(--background)] hover:bg-[var(--muted)]"
+                          ? "border-[var(--primary)] bg-indigo-50"
+                          : "border-[var(--border)] bg-[var(--background)] hover:bg-[var(--muted)]"
                           }`}
                       >
                         <p className="font-medium text-gray-900">Android</p>
@@ -177,8 +177,8 @@ export default function SubmitPage() {
                         type="button"
                         onClick={() => setFormData((prev) => ({ ...prev, platform: "ios" }))}
                         className={`rounded-lg border px-4 py-3 text-left transition-all duration-200 ${formData.platform === "ios"
-                            ? "border-[var(--primary)] bg-indigo-50"
-                            : "border-[var(--border)] bg-[var(--background)] hover:bg-[var(--muted)]"
+                          ? "border-[var(--primary)] bg-indigo-50"
+                          : "border-[var(--border)] bg-[var(--background)] hover:bg-[var(--muted)]"
                           }`}
                       >
                         <p className="font-medium text-gray-900">iOS</p>
@@ -267,7 +267,7 @@ export default function SubmitPage() {
               {error && <p className="text-sm text-red-500">{error}</p>}
 
               {success && (
-                <p className="text-sm text-green-600">Başarıyla gönderildi! Yönlendiriliyorsunuz...</p>
+                <p className="text-sm text-green-600">Ekleme başarılı, Onaya gönderildi</p>
               )}
 
               <div className="flex gap-3">

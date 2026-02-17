@@ -29,13 +29,12 @@ export async function updateSession(request: NextRequest) {
     }
   );
 
-  // Refresh session if expired
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
-
   // Protect admin routes
   if (request.nextUrl.pathname.startsWith("/admin")) {
+    const {
+      data: { user },
+    } = await supabase.auth.getUser();
+
     if (!user) {
       const url = request.nextUrl.clone();
       url.pathname = "/login";
