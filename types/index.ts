@@ -23,15 +23,15 @@ export interface PaginatedResponse<T> {
 export interface SerializedApp {
   id: string;
   name: string;
-  submissionType: "test" | "live";
-  platform: "android" | "ios" | null;
+  submissionType: string;
+  platform: string | null;
   playUrl: string | null;
   testUrl: string | null;
   description: string | null;
   iconUrl: string | null;
   startDate: string | null;
   endDate: string | null;
-  status: "pending" | "approved" | "rejected";
+  status: string;
   createdBy: string;
   createdAt: string;
   updatedAt: string;

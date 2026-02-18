@@ -36,6 +36,14 @@ const platformLabels: Record<"android" | "ios", string> = {
   ios: "iOS",
 };
 
+const isSubmissionType = (value: string): value is "live" | "test" => {
+  return value === "live" || value === "test";
+};
+
+const isPlatform = (value: string): value is "android" | "ios" => {
+  return value === "android" || value === "ios";
+};
+
 type StatusFilter = "all" | "pending" | "approved" | "rejected";
 type SubmissionTypeFilter = "all" | "live" | "test";
 
@@ -192,8 +200,8 @@ function AdminAppsPageContent() {
     setEditingAppId(app.id);
     setEditForm({
       name: app.name,
-      submissionType: app.submissionType,
-      platform: app.platform ?? "",
+      submissionType: isSubmissionType(app.submissionType) ? app.submissionType : "test",
+      platform: app.platform && isPlatform(app.platform) ? app.platform : "",
       playUrl: app.playUrl ?? "",
       description: app.description ?? "",
       iconUrl: app.iconUrl ?? "",
@@ -419,7 +427,7 @@ function AdminAppsPageContent() {
                             </Badge>
                           </td>
                           <td className="py-3 px-4 text-sm text-[var(--muted-foreground)]">
-                            {app.platform ? platformLabels[app.platform] : "-"}
+                            {app.platform && isPlatform(app.platform) ? platformLabels[app.platform] : "-"}
                           </td>
                           <td className="py-3 px-4">
                             <Badge variant={statusVariants[app.status] || "default"}>

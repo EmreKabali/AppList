@@ -1,5 +1,5 @@
 datasource db {
-  provider = "mysql"
+  provider = "sqlserver"
   url      = env("DATABASE_URL")
 }
 
@@ -7,34 +7,12 @@ generator client {
   provider = "prisma-client-js"
 }
 
-enum UserRole {
-  user
-  admin
-  super_admin
-}
-
-enum SubmissionType {
-  test
-  live
-}
-
-enum Platform {
-  android
-  ios
-}
-
-enum AppStatus {
-  pending
-  approved
-  rejected
-}
-
 model User {
   id        String   @id @default(cuid())
   name      String?
   email     String   @unique
   password  String
-  role      UserRole @default(user)
+  role      String   @default("user")
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
@@ -49,15 +27,15 @@ model User {
 model App {
   id             String         @id @default(cuid())
   name           String
-  submissionType SubmissionType
-  platform       Platform?
+  submissionType String
+  platform       String?
   playUrl        String?
   testUrl        String?
-  description    String?        @db.Text
-  iconUrl        String?        @db.LongText
+  description    String?
+  iconUrl        String?
   startDate      String?
   endDate        String?
-  status         AppStatus      @default(pending)
+  status         String         @default("pending")
   createdBy      String
   createdAt      DateTime       @default(now())
   updatedAt      DateTime       @updatedAt
@@ -74,8 +52,8 @@ model TestRequest {
   userId    String
   createdAt DateTime @default(now())
 
-  app  App  @relation(fields: [appId], references: [id], onDelete: Cascade)
-  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+  app  App  @relation(fields: [appId], references: [id], onDelete: Cascade, onUpdate: NoAction)
+  user User @relation(fields: [userId], references: [id], onDelete: NoAction, onUpdate: NoAction)
 
   @@unique([appId, userId])
   @@map("test_requests")
@@ -89,12 +67,12 @@ model Account {
   type              String
   provider          String
   providerAccountId String
-  refresh_token     String? @db.Text
-  access_token      String? @db.Text
+  refresh_token     String?
+  access_token      String?
   expires_at        Int?
   token_type        String?
   scope             String?
-  id_token          String? @db.Text
+  id_token          String?
   session_state     String?
 
   user User @relation(fields: [userId], references: [id], onDelete: Cascade)
