@@ -31,13 +31,10 @@ export async function getApps(params?: { page?: number; limit?: number }) {
 
 export async function submitApp(data: {
   submission_type: "live" | "test";
-  platform?: "android" | "ios";
+  platform: "android" | "ios";
   name: string;
-  play_url?: string;
-  description?: string;
+  test_url: string;
   icon_url: string;
-  start_date?: string;
-  end_date?: string;
 }) {
   return fetchApi<App>("/apps/submit", {
     method: "POST",
@@ -156,11 +153,45 @@ export async function deleteAdminUser(id: string) {
 // --- User ---
 
 export async function getUserApps() {
-  return fetchApi<App[]>("/user/apps");
+  return fetchApi<UserOwnedApp[]>("/user/apps");
 }
 
 export async function getUserTestRequests() {
   return fetchApi<Array<{ id: string; appId: string; createdAt: string; app: App }>>("/user/test-requests");
+}
+
+export interface TesterApplicant {
+  id: string;
+  createdAt: string;
+  user: {
+    id: string;
+    name: string | null;
+    email: string;
+  };
+}
+
+export interface UserOwnedApp extends App {
+  testRequests?: TesterApplicant[];
+}
+
+export async function updateUserApp(
+  id: string,
+  updates: {
+    name?: string;
+    submissionType?: "live" | "test";
+    platform?: "android" | "ios" | null;
+    playUrl?: string | null;
+    testUrl?: string | null;
+    description?: string | null;
+    iconUrl?: string | null;
+    startDate?: string | null;
+    endDate?: string | null;
+  }
+) {
+  return fetchApi<UserOwnedApp>("/user/apps", {
+    method: "PATCH",
+    body: JSON.stringify({ id, ...updates }),
+  });
 }
 
 export async function registerAsTester(appId: string) {

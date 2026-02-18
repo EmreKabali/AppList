@@ -26,6 +26,20 @@ export async function POST(
       );
     }
 
+    if (app.submissionType !== "test") {
+      return NextResponse.json<ApiResponse>(
+        { success: false, error: "Sadece test uygulamalarına tester olunabilir" },
+        { status: 400 }
+      );
+    }
+
+    if (app.createdBy === context.userId) {
+      return NextResponse.json<ApiResponse>(
+        { success: false, error: "Kendi uygulamanıza tester olarak eklenemezsiniz" },
+        { status: 400 }
+      );
+    }
+
     const existing = await prisma.testRequest.findUnique({
       where: { appId_userId: { appId: id, userId: context.userId } },
     });

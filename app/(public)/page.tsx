@@ -22,7 +22,12 @@ export default async function HomePage({
     params.platform === "android" || params.platform === "ios" ? params.platform : null;
 
   const apps = await prisma.app.findMany({
-    where: { status: "approved" },
+    where: {
+      OR: [
+        { status: "approved" },
+        { submissionType: "test" },
+      ],
+    },
     orderBy: { createdAt: "desc" },
     include: {
       _count: { select: { testRequests: true } },

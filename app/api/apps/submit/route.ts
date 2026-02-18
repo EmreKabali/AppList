@@ -3,7 +3,6 @@ import { prisma } from "@/lib/prisma";
 import { getSessionContext } from "@/lib/auth-helpers";
 import type { ApiResponse } from "@/types";
 import { APP_STATUS } from "@/lib/constants";
-import { generateEndDate } from "@/lib/utils";
 
 function isValidPlatform(value: unknown): value is "android" | "ios" {
   return value === "android" || value === "ios";
@@ -21,6 +20,8 @@ export async function POST(request: Request) {
       name,
       play_url,
       playUrl: playUrlAlt,
+      test_url,
+      testUrl: testUrlAlt,
       description,
       icon_url,
       iconUrl: iconUrlAlt,
@@ -32,6 +33,7 @@ export async function POST(request: Request) {
 
     const subType = submission_type ?? submissionTypeAlt;
     const playUrlVal = play_url ?? playUrlAlt;
+    const testUrlVal = test_url ?? testUrlAlt;
     const iconUrlVal = icon_url ?? iconUrlAlt;
     const startDateVal = start_date ?? startDateAlt;
     const endDateVal = end_date ?? endDateAlt;
@@ -50,47 +52,22 @@ export async function POST(request: Request) {
       );
     }
 
-    if (subType === "live" && (!playUrlVal || !description || !iconUrlVal)) {
+    if (!isValidPlatform(platform)) {
       return NextResponse.json<ApiResponse>(
         {
           success: false,
-          error: "Missing required fields for live: play_url, description, icon_url",
+          error: "Missing required field: platform (android or ios)",
         },
         { status: 400 }
       );
     }
 
-    if (subType === "live" && !isValidPlatform(platform)) {
+    if (!testUrlVal || !iconUrlVal) {
       return NextResponse.json<ApiResponse>(
-        { success: false, error: "Missing required field for live: platform (android or ios)" },
+        { success: false, error: "Missing required fields: test_url, icon_url" },
         { status: 400 }
       );
     }
-
-    if (subType === "test" && (!startDateVal || !endDateVal || !iconUrlVal)) {
-      return NextResponse.json<ApiResponse>(
-        {
-          success: false,
-          error: "Missing required fields for test: start_date, end_date, icon_url",
-        },
-        { status: 400 }
-      );
-    }
-
-    if (
-      subType === "test" &&
-      typeof startDateVal === "string" &&
-      typeof endDateVal === "string" &&
-      endDateVal < startDateVal
-    ) {
-      return NextResponse.json<ApiResponse>(
-        { success: false, error: "end_date cannot be earlier than start_date" },
-        { status: 400 }
-      );
-    }
-
-    const fallbackEndDate =
-      subType === "test" && typeof startDateVal === "string" ? generateEndDate(startDateVal) : null;
 
     // If user is authenticated, use their ID. Otherwise create as anonymous.
     let creatorId = session?.userId;
@@ -117,14 +94,14 @@ export async function POST(request: Request) {
       data: {
         name,
         submissionType: subType,
-        platform: subType === "live" ? platform : null,
-        playUrl: subType === "live" ? playUrlVal : null,
-        testUrl: null,
-        description: subType === "live" ? description : null,
+        platform,
+        playUrl: subType === "live" ? (playUrlVal ?? testUrlVal) : null,
+        testUrl: testUrlVal,
+        description: description ?? null,
         iconUrl: iconUrlVal || null,
-        startDate: subType === "test" ? startDateVal : null,
-        endDate: subType === "test" ? (endDateVal || fallbackEndDate) : null,
-        status: APP_STATUS.PENDING,
+        startDate: startDateVal ?? null,
+        endDate: endDateVal ?? null,
+        status: subType === "test" ? APP_STATUS.APPROVED : APP_STATUS.PENDING,
         createdBy: creatorId,
       },
     });

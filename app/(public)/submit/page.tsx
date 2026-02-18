@@ -34,11 +34,8 @@ export default function SubmitPage() {
   const [formData, setFormData] = useState({
     name: "",
     platform: "android" as "android" | "ios",
-    play_url: "",
-    description: "",
+    test_url: "",
     icon_url: "",
-    start_date: "",
-    end_date: "",
   });
 
   const iconPreview = formData.icon_url;
@@ -65,27 +62,24 @@ export default function SubmitPage() {
       return;
     }
 
-    if (submissionType === "live" && !formData.platform) {
+    if (!formData.platform) {
       setLoading(false);
-      setError("Yayında uygulamalar için platform seçin");
+      setError("Platform seçimi zorunludur");
       return;
     }
 
-    if (submissionType === "test" && formData.end_date < formData.start_date) {
+    if (!formData.test_url) {
       setLoading(false);
-      setError("Bitiş tarihi başlangıç tarihinden önce olamaz");
+      setError("Test linki zorunludur");
       return;
     }
 
     const response = await submitApp({
       submission_type: submissionType,
-      platform: submissionType === "live" ? formData.platform : undefined,
+      platform: formData.platform,
       name: formData.name,
-      play_url: submissionType === "live" ? formData.play_url : undefined,
-      description: submissionType === "live" ? formData.description : undefined,
+      test_url: formData.test_url,
       icon_url: formData.icon_url,
-      start_date: submissionType === "test" ? formData.start_date : undefined,
-      end_date: submissionType === "test" ? formData.end_date : undefined,
     });
 
     setLoading(false);
@@ -95,11 +89,8 @@ export default function SubmitPage() {
       setFormData({
         name: "",
         platform: "android",
-        play_url: "",
-        description: "",
+        test_url: "",
         icon_url: "",
-        start_date: "",
-        end_date: "",
       });
       setTimeout(() => router.push("/"), 2000);
     } else {
@@ -122,7 +113,7 @@ export default function SubmitPage() {
           <CardContent>
             <form onSubmit={handleSubmit} className="space-y-6">
               <div>
-                <p className="text-sm font-medium text-[var(--foreground)] mb-2">Gönderim Türü</p>
+                <p className="text-sm font-medium text-[var(--foreground)] mb-2">Statü</p>
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                   <button
                     type="button"
@@ -157,82 +148,42 @@ export default function SubmitPage() {
                 required
               />
 
-              {submissionType === "live" ? (
-                <>
-                  <div>
-                    <p className="text-sm font-medium text-[var(--foreground)] mb-2">Platform</p>
-                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                      <button
-                        type="button"
-                        onClick={() => setFormData((prev) => ({ ...prev, platform: "android" }))}
-                        className={`rounded-lg border px-4 py-3 text-left transition-all duration-200 ${formData.platform === "android"
-                          ? "border-[var(--primary)] bg-indigo-50"
-                          : "border-[var(--border)] bg-[var(--background)] hover:bg-[var(--muted)]"
-                          }`}
-                      >
-                        <p className="font-medium text-gray-900">Android</p>
-                        <p className="text-sm text-gray-600">Google Play Store yayını</p>
-                      </button>
-                      <button
-                        type="button"
-                        onClick={() => setFormData((prev) => ({ ...prev, platform: "ios" }))}
-                        className={`rounded-lg border px-4 py-3 text-left transition-all duration-200 ${formData.platform === "ios"
-                          ? "border-[var(--primary)] bg-indigo-50"
-                          : "border-[var(--border)] bg-[var(--background)] hover:bg-[var(--muted)]"
-                          }`}
-                      >
-                        <p className="font-medium text-gray-900">iOS</p>
-                        <p className="text-sm text-gray-600">Apple App Store yayını</p>
-                      </button>
-                    </div>
-                  </div>
-
-                  <Input
-                    label="Play Store veya App Store URL"
-                    placeholder="https://play.google.com/... veya https://apps.apple.com/..."
-                    type="url"
-                    value={formData.play_url}
-                    onChange={(e) => setFormData({ ...formData, play_url: e.target.value })}
-                    required
-                  />
-
-                  <div className="w-full">
-                    <label
-                      htmlFor="app-description"
-                      className="block text-sm font-medium text-[var(--foreground)] mb-1.5"
-                    >
-                      Uygulama Açıklaması
-                    </label>
-                    <textarea
-                      id="app-description"
-                      rows={4}
-                      className="w-full px-3.5 py-2.5 border border-[var(--border)] rounded-lg text-sm bg-[var(--background)] text-[var(--foreground)] placeholder:text-[var(--muted-foreground)] focus:outline-none focus:ring-2 focus:ring-[var(--ring)] focus:border-[var(--primary)] transition-all duration-200"
-                      placeholder="Uygulamanızın kısa açıklamasını yazın"
-                      value={formData.description}
-                      onChange={(e) => setFormData({ ...formData, description: e.target.value })}
-                      required
-                    />
-                  </div>
-                </>
-              ) : (
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                  <Input
-                    label="Başlangıç Tarihi"
-                    type="date"
-                    value={formData.start_date}
-                    onChange={(e) => setFormData({ ...formData, start_date: e.target.value })}
-                    required
-                  />
-                  <Input
-                    label="Bitiş Tarihi"
-                    type="date"
-                    min={formData.start_date || undefined}
-                    value={formData.end_date}
-                    onChange={(e) => setFormData({ ...formData, end_date: e.target.value })}
-                    required
-                  />
+              <div>
+                <p className="text-sm font-medium text-[var(--foreground)] mb-2">Platform</p>
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                  <button
+                    type="button"
+                    onClick={() => setFormData((prev) => ({ ...prev, platform: "android" }))}
+                    className={`rounded-lg border px-4 py-3 text-left transition-all duration-200 ${formData.platform === "android"
+                      ? "border-[var(--primary)] bg-indigo-50"
+                      : "border-[var(--border)] bg-[var(--background)] hover:bg-[var(--muted)]"
+                      }`}
+                  >
+                    <p className="font-medium text-gray-900">Android</p>
+                    <p className="text-sm text-gray-600">Google Play Store</p>
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setFormData((prev) => ({ ...prev, platform: "ios" }))}
+                    className={`rounded-lg border px-4 py-3 text-left transition-all duration-200 ${formData.platform === "ios"
+                      ? "border-[var(--primary)] bg-indigo-50"
+                      : "border-[var(--border)] bg-[var(--background)] hover:bg-[var(--muted)]"
+                      }`}
+                  >
+                    <p className="font-medium text-gray-900">iOS</p>
+                    <p className="text-sm text-gray-600">Apple App Store</p>
+                  </button>
                 </div>
-              )}
+              </div>
+
+              <Input
+                label="Test Linki"
+                placeholder="https://..."
+                type="url"
+                value={formData.test_url}
+                onChange={(e) => setFormData({ ...formData, test_url: e.target.value })}
+                required
+              />
 
               <div className="w-full space-y-3">
                 <label className="block text-sm font-medium text-[var(--foreground)]">
@@ -243,13 +194,7 @@ export default function SubmitPage() {
                   accept="image/*"
                   onChange={(e) => handleImageUpload(e.target.files?.[0] || null)}
                   className="w-full text-sm text-[var(--foreground)] file:mr-3 file:px-4 file:py-2 file:rounded-lg file:border-0 file:bg-[var(--muted)] file:text-[var(--foreground)] file:cursor-pointer"
-                />
-                <Input
-                  label="veya Görsel URL"
-                  placeholder="https://example.com/icon.png"
-                  type="url"
-                  value={formData.icon_url.startsWith("data:") ? "" : formData.icon_url}
-                  onChange={(e) => setFormData({ ...formData, icon_url: e.target.value })}
+                  required
                 />
                 {iconPreview && (
                   <div className="rounded-lg border border-[var(--border)] p-3 bg-[var(--background)]">

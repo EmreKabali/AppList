@@ -2,6 +2,7 @@ import { Card } from "./ui/card";
 import { Badge } from "./ui/badge";
 import { Button } from "./ui/button";
 import { CountdownBadge } from "./countdown-badge";
+import { TestRequestButton } from "./test-request-button";
 import { ExternalLink } from "lucide-react";
 import type { SerializedApp } from "@/types";
 
@@ -16,8 +17,9 @@ interface AppCardProps {
 }
 
 export function AppCard({ app }: Readonly<AppCardProps>) {
+  const linkUrl = app.playUrl ?? app.testUrl;
   const storeLabel =
-    app.platform === "ios" || app.playUrl?.includes("apps.apple.com") ? "App Store" : "Play Store";
+    app.platform === "ios" || linkUrl?.includes("apps.apple.com") ? "App Store" : "Play Store";
   const typeLabel = app.submissionType === "live" ? "Yayında" : "Test";
   const getPlatformLabel = () => {
     if (app.platform === "ios") return "iOS";
@@ -75,15 +77,19 @@ export function AppCard({ app }: Readonly<AppCardProps>) {
                   {app.testerCount} tester
                 </Badge>
               )}
+
+              {app.submissionType === "test" && (
+                <TestRequestButton appId={app.id} testerCount={app.testerCount ?? 0} />
+              )}
             </div>
 
             <div className="flex items-center gap-2 ml-auto opacity-0 group-hover:opacity-100 transition-opacity duration-300">
-              {app.playUrl && (
+              {linkUrl && (
                 <Button
                   variant="outline"
                   size="sm"
                   className="h-8 gap-1.5 font-semibold border-indigo-200 text-indigo-600 hover:bg-indigo-600 hover:text-white transition-all shadow-sm"
-                  onClick={() => globalThis.open(app.playUrl!, "_blank", "noopener,noreferrer")}
+                  onClick={() => globalThis.open(linkUrl, "_blank", "noopener,noreferrer")}
                 >
                   {storeLabel}
                   <ExternalLink className="h-3.5 w-3.5" />

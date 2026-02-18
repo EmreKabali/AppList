@@ -9,9 +9,16 @@ export async function GET(request: Request) {
   const skip = (page - 1) * limit;
 
   try {
+    const visibilityFilter = {
+      OR: [
+        { status: "approved" },
+        { submissionType: "test" },
+      ],
+    } as const;
+
     const [apps, count] = await Promise.all([
       prisma.app.findMany({
-        where: { status: "approved" },
+        where: visibilityFilter,
         orderBy: { createdAt: "desc" },
         skip,
         take: limit,
@@ -19,7 +26,7 @@ export async function GET(request: Request) {
           _count: { select: { testRequests: true } },
         },
       }),
-      prisma.app.count({ where: { status: "approved" } }),
+      prisma.app.count({ where: visibilityFilter }),
     ]);
 
     return NextResponse.json<ApiResponse<PaginatedResponse<App>>>({
