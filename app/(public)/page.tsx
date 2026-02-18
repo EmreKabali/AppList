@@ -1,13 +1,10 @@
 import { Header } from "@/components/header";
 import { PublicAppsBoard } from "@/components/public-apps-board";
-
-import { createClient } from "@/lib/supabase/server";
-
-import type { App } from "@/types/database";
+import { prisma } from "@/lib/prisma";
 
 type ViewType = "live" | "active-test" | "expired-test";
 
-export const revalidate = 60; // Revalidate every 60 seconds
+export const revalidate = 60;
 
 export default async function HomePage({
   searchParams,
@@ -24,18 +21,20 @@ export default async function HomePage({
   const initialPlatformFilter =
     params.platform === "android" || params.platform === "ios" ? params.platform : null;
 
-  const supabase = await createClient();
-  const { data, error } = await supabase
-    .from("apps")
-    .select("*")
-    .eq("status", "approved")
-    .order("created_at", { ascending: false });
+  const apps = await prisma.app.findMany({
+    where: { status: "approved" },
+    orderBy: { createdAt: "desc" },
+    include: {
+      _count: { select: { testRequests: true } },
+    },
+  });
 
-  if (error) {
-    throw new Error(error.message);
-  }
-
-  const apps: App[] = data ?? [];
+  const serializedApps = apps.map((app) => ({
+    ...app,
+    createdAt: app.createdAt.toISOString(),
+    updatedAt: app.updatedAt.toISOString(),
+    testerCount: app._count.testRequests,
+  }));
 
   return (
     <div className="min-h-screen bg-gray-50">
@@ -47,10 +46,8 @@ export default async function HomePage({
           <p className="text-gray-600">Kartlara tıklayarak yayında ve test süreçlerini takip edin</p>
         </div>
 
-
-
         <PublicAppsBoard
-          apps={apps}
+          apps={serializedApps}
           initialView={initialView}
           initialPlatformFilter={initialPlatformFilter}
         />

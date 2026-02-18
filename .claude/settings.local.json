@@ -8,7 +8,9 @@
       "Bash(dir:*)",
       "Bash(npm run dev:*)",
       "mcp__plugin_maestro_context7__resolve-library-id",
-      "Bash(npm view:*)"
+      "Bash(npm view:*)",
+      "Bash(npm uninstall:*)",
+      "Bash(npx prisma generate:*)"
     ]
   }
 }

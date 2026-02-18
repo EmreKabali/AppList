@@ -1,4 +1,4 @@
-import type { App, AdminUser } from "@/types/database";
+import type { App, User } from "@/types/database";
 import type { ApiResponse, PaginatedResponse } from "@/types";
 
 const API_BASE = "/api";
@@ -17,6 +17,8 @@ async function fetchApi<T>(
 
   return response.json();
 }
+
+// --- Public ---
 
 export async function getApps(params?: { page?: number; limit?: number }) {
   const searchParams = new URLSearchParams();
@@ -42,6 +44,31 @@ export async function submitApp(data: {
     body: JSON.stringify(data),
   });
 }
+
+// --- Auth ---
+
+export async function registerUser(data: {
+  email: string;
+  password: string;
+  name?: string;
+}) {
+  return fetchApi<{ id: string; email: string }>("/auth/register", {
+    method: "POST",
+    body: JSON.stringify(data),
+  });
+}
+
+export async function changePassword(data: {
+  currentPassword: string;
+  newPassword: string;
+}) {
+  return fetchApi<{ message: string }>("/auth/change-password", {
+    method: "POST",
+    body: JSON.stringify(data),
+  });
+}
+
+// --- Admin Apps ---
 
 export async function getAdminApps(params?: {
   page?: number;
@@ -73,14 +100,14 @@ export async function updateAppStatus(id: string, status: string) {
 export async function updateAdminApp(
   id: string,
   updates: {
-    submission_type?: "live" | "test";
+    submissionType?: "live" | "test";
     platform?: "android" | "ios" | null;
     name?: string;
-    play_url?: string | null;
+    playUrl?: string | null;
     description?: string | null;
-    icon_url?: string | null;
-    start_date?: string | null;
-    end_date?: string | null;
+    iconUrl?: string | null;
+    startDate?: string | null;
+    endDate?: string | null;
     status?: string;
   }
 ) {
@@ -96,21 +123,25 @@ export async function deleteAdminApp(id: string) {
   });
 }
 
-export async function getAdminUsers(params?: { page?: number; limit?: number }) {
+// --- Admin Users ---
+
+export async function getAdminUsers(params?: { page?: number; limit?: number; role?: string }) {
   const searchParams = new URLSearchParams();
   if (params?.page) searchParams.set("page", params.page.toString());
   if (params?.limit) searchParams.set("limit", params.limit.toString());
+  if (params?.role) searchParams.set("role", params.role);
 
   const query = searchParams.toString() ? `?${searchParams.toString()}` : "";
-  return fetchApi<PaginatedResponse<Omit<AdminUser, "password_hash">> & { currentRole: "admin" | "super_admin" }>(`/admin/users${query}`);
+  return fetchApi<PaginatedResponse<Omit<User, "password">> & { currentRole: string }>(`/admin/users${query}`);
 }
 
 export async function createAdminUser(data: {
   email: string;
   password: string;
   role?: string;
+  name?: string;
 }) {
-  return fetchApi<Omit<AdminUser, "password_hash">>("/admin/users", {
+  return fetchApi<Omit<User, "password">>("/admin/users", {
     method: "POST",
     body: JSON.stringify(data),
   });
@@ -119,5 +150,34 @@ export async function createAdminUser(data: {
 export async function deleteAdminUser(id: string) {
   return fetchApi<void>(`/admin/users?id=${id}`, {
     method: "DELETE",
+  });
+}
+
+// --- User ---
+
+export async function getUserApps() {
+  return fetchApi<App[]>("/user/apps");
+}
+
+export async function getUserTestRequests() {
+  return fetchApi<Array<{ id: string; appId: string; createdAt: string; app: App }>>("/user/test-requests");
+}
+
+export async function registerAsTester(appId: string) {
+  return fetchApi<{ id: string }>(`/apps/${appId}/test`, {
+    method: "POST",
+  });
+}
+
+export async function unregisterAsTester(appId: string) {
+  return fetchApi<void>(`/apps/${appId}/test`, {
+    method: "DELETE",
+  });
+}
+
+export async function updateProfile(data: { name?: string }) {
+  return fetchApi<Omit<User, "password">>("/user/profile", {
+    method: "PATCH",
+    body: JSON.stringify(data),
   });
 }

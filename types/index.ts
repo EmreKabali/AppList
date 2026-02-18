@@ -18,3 +18,22 @@ export interface PaginatedResponse<T> {
   limit: number;
   totalPages: number;
 }
+
+/** App with Date fields serialized to strings for client components */
+export interface SerializedApp {
+  id: string;
+  name: string;
+  submissionType: "test" | "live";
+  platform: "android" | "ios" | null;
+  playUrl: string | null;
+  testUrl: string | null;
+  description: string | null;
+  iconUrl: string | null;
+  startDate: string | null;
+  endDate: string | null;
+  status: "pending" | "approved" | "rejected";
+  createdBy: string;
+  createdAt: string;
+  updatedAt: string;
+  testerCount?: number;
+}

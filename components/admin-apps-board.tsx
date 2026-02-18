@@ -4,13 +4,13 @@ import { useMemo, useState } from "react";
 import Link from "next/link";
 import { AppCard } from "@/components/app-card";
 import { StatsCard } from "@/components/stats-card";
-import type { App } from "@/types/database";
+import type { SerializedApp } from "@/types";
 
 type ViewType = "live" | "test";
 type PlatformFilter = "android" | "ios" | null;
 
 interface AdminAppsBoardProps {
-  apps: App[];
+  apps: SerializedApp[];
   query: string;
 }
 
@@ -19,8 +19,8 @@ export function AdminAppsBoard({ apps, query }: Readonly<AdminAppsBoardProps>) {
   const [platformFilter, setPlatformFilter] = useState<PlatformFilter>(null);
 
   const stats = useMemo(() => {
-    const liveApps = apps.filter((app) => app.submission_type === "live");
-    const testApps = apps.filter((app) => app.submission_type === "test");
+    const liveApps = apps.filter((app) => app.submissionType === "live");
+    const testApps = apps.filter((app) => app.submissionType === "test");
 
     return {
       live: liveApps.length,
@@ -30,15 +30,15 @@ export function AdminAppsBoard({ apps, query }: Readonly<AdminAppsBoardProps>) {
 
   const currentApps = useMemo(() => {
     if (view === "test") {
-      return apps.filter((app) => app.submission_type === "test");
+      return apps.filter((app) => app.submissionType === "test");
     }
 
     if (!platformFilter) {
-      return apps.filter((app) => app.submission_type === "live");
+      return apps.filter((app) => app.submissionType === "live");
     }
 
     return apps.filter(
-      (app) => app.submission_type === "live" && app.platform === platformFilter
+      (app) => app.submissionType === "live" && app.platform === platformFilter
     );
   }, [apps, platformFilter, view]);
 

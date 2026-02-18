@@ -1,18 +1,9 @@
 import { NextResponse } from "next/server";
-import { createClient } from "@/lib/supabase/server";
+import { prisma } from "@/lib/prisma";
+import { getSessionContext } from "@/lib/auth-helpers";
 import type { ApiResponse } from "@/types";
 import { APP_STATUS } from "@/lib/constants";
 import { generateEndDate } from "@/lib/utils";
-
-function isSchemaCacheColumnError(message: string): boolean {
-  return (
-    message.includes("schema cache") &&
-    (message.includes("description") ||
-      message.includes("icon_url") ||
-      message.includes("submission_type") ||
-      message.includes("platform"))
-  );
-}
 
 function isValidPlatform(value: unknown): value is "android" | "ios" {
   return value === "android" || value === "ios";
@@ -20,36 +11,46 @@ function isValidPlatform(value: unknown): value is "android" | "ios" {
 
 export async function POST(request: Request) {
   try {
-    const supabase = await createClient();
+    const session = await getSessionContext();
     const body = await request.json();
 
     const {
       submission_type,
+      submissionType: submissionTypeAlt,
       platform,
       name,
       play_url,
+      playUrl: playUrlAlt,
       description,
       icon_url,
+      iconUrl: iconUrlAlt,
       start_date,
+      startDate: startDateAlt,
       end_date,
-      created_by,
+      endDate: endDateAlt,
     } = body;
 
-    if (!name || !submission_type) {
+    const subType = submission_type ?? submissionTypeAlt;
+    const playUrlVal = play_url ?? playUrlAlt;
+    const iconUrlVal = icon_url ?? iconUrlAlt;
+    const startDateVal = start_date ?? startDateAlt;
+    const endDateVal = end_date ?? endDateAlt;
+
+    if (!name || !subType) {
       return NextResponse.json<ApiResponse>(
         { success: false, error: "Missing required fields: name, submission_type" },
         { status: 400 }
       );
     }
 
-    if (submission_type !== "live" && submission_type !== "test") {
+    if (subType !== "live" && subType !== "test") {
       return NextResponse.json<ApiResponse>(
         { success: false, error: "submission_type must be live or test" },
         { status: 400 }
       );
     }
 
-    if (submission_type === "live" && (!play_url || !description || !icon_url)) {
+    if (subType === "live" && (!playUrlVal || !description || !iconUrlVal)) {
       return NextResponse.json<ApiResponse>(
         {
           success: false,
@@ -59,14 +60,14 @@ export async function POST(request: Request) {
       );
     }
 
-    if (submission_type === "live" && !isValidPlatform(platform)) {
+    if (subType === "live" && !isValidPlatform(platform)) {
       return NextResponse.json<ApiResponse>(
         { success: false, error: "Missing required field for live: platform (android or ios)" },
         { status: 400 }
       );
     }
 
-    if (submission_type === "test" && (!start_date || !end_date || !icon_url)) {
+    if (subType === "test" && (!startDateVal || !endDateVal || !iconUrlVal)) {
       return NextResponse.json<ApiResponse>(
         {
           success: false,
@@ -77,10 +78,10 @@ export async function POST(request: Request) {
     }
 
     if (
-      submission_type === "test" &&
-      typeof start_date === "string" &&
-      typeof end_date === "string" &&
-      end_date < start_date
+      subType === "test" &&
+      typeof startDateVal === "string" &&
+      typeof endDateVal === "string" &&
+      endDateVal < startDateVal
     ) {
       return NextResponse.json<ApiResponse>(
         { success: false, error: "end_date cannot be earlier than start_date" },
@@ -89,73 +90,50 @@ export async function POST(request: Request) {
     }
 
     const fallbackEndDate =
-      submission_type === "test" && typeof start_date === "string" ? generateEndDate(start_date) : null;
+      subType === "test" && typeof startDateVal === "string" ? generateEndDate(startDateVal) : null;
 
-    const insertPayload = {
-      name,
-      submission_type,
-      platform: submission_type === "live" ? platform : null,
-      play_url: submission_type === "live" ? play_url : null,
-      test_url: null,
-      description: submission_type === "live" ? description : null,
-      icon_url: icon_url || null,
-      start_date: submission_type === "test" ? start_date : null,
-      end_date: submission_type === "test" ? end_date || fallbackEndDate : null,
-      status: APP_STATUS.PENDING,
-      created_by: created_by || "Anonymous",
-    };
+    // If user is authenticated, use their ID. Otherwise create as anonymous.
+    let creatorId = session?.userId;
 
-    const { data, error } = await supabase
-      .from("apps")
-      .insert(insertPayload as never)
-      .select()
-      .single();
-
-    if (error && isSchemaCacheColumnError(error.message)) {
-      const legacyPayload = {
-        name,
-        play_url: submission_type === "live" ? play_url : null,
-        test_url: null,
-        start_date: submission_type === "test" ? start_date : null,
-        end_date: submission_type === "test" ? end_date || fallbackEndDate : null,
-        status: APP_STATUS.PENDING,
-        created_by: created_by || "Anonymous",
-      };
-
-      const { data: legacyData, error: legacyError } = await supabase
-        .from("apps")
-        .insert(legacyPayload as never)
-        .select()
-        .single();
-
-      if (legacyError) {
-        return NextResponse.json<ApiResponse>(
-          {
-            success: false,
-            error: `${legacyError.message}. Migration gerekli: supabase/migrations/004_submission_fields.sql`,
+    if (!creatorId) {
+      // Create or get anonymous user for unauthenticated submissions
+      let anonUser = await prisma.user.findUnique({
+        where: { email: "anonymous@applist.com" },
+      });
+      if (!anonUser) {
+        anonUser = await prisma.user.create({
+          data: {
+            email: "anonymous@applist.com",
+            name: "Anonymous",
+            password: "",
+            role: "user",
           },
-          { status: 500 }
-        );
+        });
       }
-
-      return NextResponse.json<ApiResponse>(
-        { success: true, data: legacyData },
-        { status: 201 }
-      );
+      creatorId = anonUser.id;
     }
 
-    if (error) {
-      return NextResponse.json<ApiResponse>(
-        { success: false, error: error.message },
-        { status: 500 }
-      );
-    }
+    const data = await prisma.app.create({
+      data: {
+        name,
+        submissionType: subType,
+        platform: subType === "live" ? platform : null,
+        playUrl: subType === "live" ? playUrlVal : null,
+        testUrl: null,
+        description: subType === "live" ? description : null,
+        iconUrl: iconUrlVal || null,
+        startDate: subType === "test" ? startDateVal : null,
+        endDate: subType === "test" ? (endDateVal || fallbackEndDate) : null,
+        status: APP_STATUS.PENDING,
+        createdBy: creatorId,
+      },
+    });
 
     return NextResponse.json<ApiResponse>(
       { success: true, data },
       { status: 201 }
     );
-  } catch (error) {
+  } catch {
     return NextResponse.json<ApiResponse>(
       { success: false, error: "Internal server error" },
       { status: 500 }

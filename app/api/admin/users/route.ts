@@ -1,11 +1,14 @@
 import { NextResponse } from "next/server";
-import { getAdminSessionContext } from "@/lib/admin-auth";
-import { createServiceClient } from "@/lib/supabase/server";
-import type { AdminUser, ApiResponse, PaginatedResponse } from "@/types";
-import { ADMIN_ROLES } from "@/lib/constants";
+import { prisma } from "@/lib/prisma";
+import { getSessionContext } from "@/lib/auth-helpers";
+import bcrypt from "bcryptjs";
+import type { ApiResponse, PaginatedResponse } from "@/types";
+import type { User } from "@prisma/client";
 
-type AdminUsersResponse = PaginatedResponse<Omit<AdminUser, "password_hash">> & {
-  currentRole: "admin" | "super_admin";
+type SafeUser = Omit<User, "password">;
+
+type UsersResponse = PaginatedResponse<SafeUser> & {
+  currentRole: string;
 };
 
 function unauthorizedResponse() {
@@ -22,95 +25,51 @@ function forbiddenResponse() {
   );
 }
 
-async function hasAuthUserIdColumn(
-  supabase: ReturnType<typeof createServiceClient>
-): Promise<boolean> {
-  const { data, error } = await supabase
-    .from("information_schema.columns")
-    .select("column_name")
-    .eq("table_schema", "public")
-    .eq("table_name", "admin_users")
-    .eq("column_name", "auth_user_id")
-    .maybeSingle();
-
-  if (error) {
-    return false;
-  }
-
-  const column = data as { column_name?: string } | null;
-  return Boolean(column?.column_name);
-}
-
-async function resolveAuthUserIdByEmail(
-  email: string,
-  supabase: ReturnType<typeof createServiceClient>
-): Promise<string | null> {
-  const perPage = 200;
-  let page = 1;
-
-  while (page <= 10) {
-    const { data, error } = await supabase.auth.admin.listUsers({ page, perPage });
-
-    if (error) {
-      return null;
-    }
-
-    const matchedUser = data.users.find((user) => user.email?.toLowerCase() === email.toLowerCase());
-    if (matchedUser?.id) {
-      return matchedUser.id;
-    }
-
-    if (data.users.length < perPage) {
-      return null;
-    }
-
-    page += 1;
-  }
-
-  return null;
-}
-
-function isAuthUserMissing(errorMessage: string) {
-  const message = errorMessage.toLowerCase();
-  return message.includes("not found") || message.includes("no rows");
-}
-
 export async function GET(request: Request) {
   const { searchParams } = new URL(request.url);
   const page = parseInt(searchParams.get("page") || "1");
   const limit = parseInt(searchParams.get("limit") || "20");
-  const offset = (page - 1) * limit;
+  const roleFilter = searchParams.get("role");
+  const skip = (page - 1) * limit;
 
   try {
-    const adminContext = await getAdminSessionContext();
-    if (!adminContext) {
+    const context = await getSessionContext();
+    if (!context || (context.role !== "admin" && context.role !== "super_admin")) {
       return unauthorizedResponse();
     }
 
-    const supabase = createServiceClient();
-
-    const { data: users, error, count } = await supabase
-      .from("admin_users")
-      .select("id, email, role, created_at, created_by", { count: "exact" })
-      .order("created_at", { ascending: false })
-      .range(offset, offset + limit - 1);
-
-    if (error) {
-      return NextResponse.json<ApiResponse>(
-        { success: false, error: error.message },
-        { status: 500 }
-      );
+    const where: Record<string, unknown> = {};
+    if (roleFilter && ["user", "admin", "super_admin"].includes(roleFilter)) {
+      where.role = roleFilter;
     }
 
-    return NextResponse.json<ApiResponse<AdminUsersResponse>>({
+    const [users, count] = await Promise.all([
+      prisma.user.findMany({
+        where,
+        select: {
+          id: true,
+          name: true,
+          email: true,
+          role: true,
+          createdAt: true,
+          updatedAt: true,
+        },
+        orderBy: { createdAt: "desc" },
+        skip,
+        take: limit,
+      }),
+      prisma.user.count({ where }),
+    ]);
+
+    return NextResponse.json<ApiResponse<UsersResponse>>({
       success: true,
       data: {
-        data: users as Omit<AdminUser, "password_hash">[],
-        total: count || 0,
+        data: users as unknown as SafeUser[],
+        total: count,
         page,
         limit,
-        totalPages: Math.ceil((count || 0) / limit),
-        currentRole: adminContext.role,
+        totalPages: Math.ceil(count / limit),
+        currentRole: context.role,
       },
     });
   } catch {
@@ -123,19 +82,13 @@ export async function GET(request: Request) {
 
 export async function POST(request: Request) {
   try {
-    const adminContext = await getAdminSessionContext();
-    if (!adminContext) {
-      return unauthorizedResponse();
+    const context = await getSessionContext();
+    if (!context || context.role !== "super_admin") {
+      return context ? forbiddenResponse() : unauthorizedResponse();
     }
 
-    if (adminContext.role !== ADMIN_ROLES.SUPER_ADMIN) {
-      return forbiddenResponse();
-    }
-
-    const supabase = createServiceClient();
     const body = await request.json();
-
-    const { email, password, role } = body;
+    const { email, password, role, name } = body;
 
     if (!email || !password) {
       return NextResponse.json<ApiResponse>(
@@ -144,55 +97,43 @@ export async function POST(request: Request) {
       );
     }
 
-    if (role && !Object.values(ADMIN_ROLES).includes(role)) {
+    const validRoles = ["user", "admin", "super_admin"];
+    if (role && !validRoles.includes(role)) {
       return NextResponse.json<ApiResponse>(
         { success: false, error: "Invalid role value" },
         { status: 400 }
       );
     }
 
-    // Create auth user
-    const { data: authData, error: authError } = await supabase.auth.admin.createUser({
-      email,
-      password,
-      email_confirm: true,
-    });
-
-    if (authError || !authData.user) {
+    const existing = await prisma.user.findUnique({ where: { email } });
+    if (existing) {
       return NextResponse.json<ApiResponse>(
-        { success: false, error: authError?.message || "Failed to create user" },
+        { success: false, error: "Bu e-posta adresi zaten kayıtlı" },
         { status: 400 }
       );
     }
 
-    const supportsAuthUserId = await hasAuthUserIdColumn(supabase);
-    const adminUserInsertPayload: Record<string, string> = {
-      email,
-      password_hash: "", // Auth handled by Supabase
-      role: role || ADMIN_ROLES.ADMIN,
-      created_by: adminContext.userId,
-    };
+    const hashedPassword = await bcrypt.hash(password, 12);
 
-    if (supportsAuthUserId) {
-      adminUserInsertPayload.auth_user_id = authData.user.id;
-    }
-
-    // Create admin_users record
-    const { data, error } = await supabase
-      .from("admin_users")
-      .insert(adminUserInsertPayload as never)
-      .select()
-      .single();
-
-    if (error) {
-      return NextResponse.json<ApiResponse>(
-        { success: false, error: error.message },
-        { status: 500 }
-      );
-    }
+    const user = await prisma.user.create({
+      data: {
+        email,
+        name: name || null,
+        password: hashedPassword,
+        role: role || "admin",
+      },
+      select: {
+        id: true,
+        name: true,
+        email: true,
+        role: true,
+        createdAt: true,
+        updatedAt: true,
+      },
+    });
 
     return NextResponse.json<ApiResponse>(
-      { success: true, data },
+      { success: true, data: user },
       { status: 201 }
     );
   } catch {
@@ -205,16 +146,11 @@ export async function POST(request: Request) {
 
 export async function DELETE(request: Request) {
   try {
-    const adminContext = await getAdminSessionContext();
-    if (!adminContext) {
-      return unauthorizedResponse();
+    const context = await getSessionContext();
+    if (!context || context.role !== "super_admin") {
+      return context ? forbiddenResponse() : unauthorizedResponse();
     }
 
-    if (adminContext.role !== ADMIN_ROLES.SUPER_ADMIN) {
-      return forbiddenResponse();
-    }
-
-    const supabase = createServiceClient();
     const { searchParams } = new URL(request.url);
     const id = searchParams.get("id");
 
@@ -225,60 +161,26 @@ export async function DELETE(request: Request) {
       );
     }
 
-    const supportsAuthUserId = await hasAuthUserIdColumn(supabase);
-    const selectColumns = supportsAuthUserId ? "id,auth_user_id,email" : "id,email";
+    const targetUser = await prisma.user.findUnique({
+      where: { id },
+      select: { id: true, email: true },
+    });
 
-    const { data: targetAdminRow, error: targetAdminError } = await supabase
-      .from("admin_users")
-      .select(selectColumns)
-      .eq("id", id)
-      .maybeSingle();
-
-    const targetAdmin = targetAdminRow as
-      | Pick<AdminUser, "id" | "email"> & { auth_user_id?: string | null }
-      | null;
-
-    if (targetAdminError) {
-      return NextResponse.json<ApiResponse>(
-        { success: false, error: targetAdminError.message },
-        { status: 500 }
-      );
-    }
-
-    if (!targetAdmin) {
+    if (!targetUser) {
       return NextResponse.json<ApiResponse>(
         { success: false, error: "User not found" },
         { status: 404 }
       );
     }
 
-    if (targetAdmin.email === adminContext.email) {
+    if (targetUser.email === context.email) {
       return NextResponse.json<ApiResponse>(
-        { success: false, error: "You cannot delete your own admin account" },
+        { success: false, error: "Kendi hesabınızı silemezsiniz" },
         { status: 400 }
       );
     }
 
-    const authUserId = targetAdmin.auth_user_id ?? (await resolveAuthUserIdByEmail(targetAdmin.email, supabase));
-
-    if (authUserId) {
-      const { error: deleteAuthError } = await supabase.auth.admin.deleteUser(authUserId);
-      if (deleteAuthError && !isAuthUserMissing(deleteAuthError.message)) {
-        return NextResponse.json<ApiResponse>(
-          { success: false, error: deleteAuthError.message },
-          { status: 500 }
-        );
-      }
-    }
-
-    const { error } = await supabase.from("admin_users").delete().eq("id", id);
-
-    if (error) {
-      return NextResponse.json<ApiResponse>(
-        { success: false, error: error.message },
-        { status: 500 }
-      );
-    }
+    await prisma.user.delete({ where: { id } });
 
     return NextResponse.json<ApiResponse>({ success: true });
   } catch {

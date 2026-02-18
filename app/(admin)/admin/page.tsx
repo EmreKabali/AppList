@@ -4,11 +4,10 @@ import { AdminLogoutButton } from "@/components/admin-logout-button";
 import { StatsCard } from "@/components/stats-card";
 import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { createClient } from "@/lib/supabase/server";
-import { getAdminSessionContext } from "@/lib/admin-auth";
-import { APP_STATUS } from "@/lib/constants";
-import type { App } from "@/types/database";
+import { prisma } from "@/lib/prisma";
+import { getSessionContext } from "@/lib/auth-helpers";
 import { redirect } from "next/navigation";
+import type { SerializedApp } from "@/types";
 
 const statusLabels: Record<string, string> = {
   pending: "Beklemede",
@@ -22,7 +21,7 @@ const statusVariants: Record<string, "default" | "success" | "warning" | "danger
   rejected: "danger",
 };
 
-const submissionTypeLabels: Record<App["submission_type"], string> = {
+const submissionTypeLabels: Record<string, string> = {
   live: "Yayında",
   test: "Test",
 };
@@ -32,86 +31,76 @@ export default async function AdminDashboardPage({
 }: Readonly<{
   searchParams: Promise<{ q?: string }>;
 }>) {
-  const adminContext = await getAdminSessionContext();
-  if (!adminContext) {
+  const adminContext = await getSessionContext();
+  if (!adminContext || (adminContext.role !== "admin" && adminContext.role !== "super_admin")) {
     redirect("/login");
   }
 
   const params = await searchParams;
-  const supabase = await createClient();
   const query = (params.q ?? "").trim();
-  const escapedQuery = query.replaceAll(",", " ");
   const todayIso = new Date().toISOString().slice(0, 10);
   const expiringLimit = new Date();
   expiringLimit.setDate(expiringLimit.getDate() + 5);
   const expiringLimitIso = expiringLimit.toISOString().slice(0, 10);
 
-  let recentAppsQuery = supabase
-    .from("apps")
-    .select("id,name,submission_type,status")
-    .order("created_at", { ascending: false })
-    .limit(5);
-
-  let expiringAppsQuery = supabase
-    .from("apps")
-    .select("id,name,end_date")
-    .eq("status", APP_STATUS.APPROVED)
-    .not("end_date", "is", null)
-    .gte("end_date", todayIso)
-    .lte("end_date", expiringLimitIso)
-    .order("end_date", { ascending: true })
-    .limit(5);
-
-  if (escapedQuery) {
-    recentAppsQuery = recentAppsQuery.ilike("name", `%${escapedQuery}%`);
-    expiringAppsQuery = expiringAppsQuery.ilike("name", `%${escapedQuery}%`);
-  }
+  const searchFilter = query
+    ? { OR: [{ name: { contains: query } }, { description: { contains: query } }] }
+    : {};
 
   const [
-    totalResult,
-    pendingResult,
-    approvedResult,
-    rejectedResult,
-    approvedAppsResult,
-    recentResult,
-    expiringResult,
+    totalCount,
+    pendingCount,
+    approvedCount,
+    rejectedCount,
+    recentApps,
+    expiringApps,
+    approvedApps,
   ] = await Promise.all([
-    supabase.from("apps").select("id", { count: "exact", head: true }),
-    supabase.from("apps").select("id", { count: "exact", head: true }).eq("status", APP_STATUS.PENDING),
-    supabase.from("apps").select("id", { count: "exact", head: true }).eq("status", APP_STATUS.APPROVED),
-    supabase.from("apps").select("id", { count: "exact", head: true }).eq("status", APP_STATUS.REJECTED),
-    supabase
-      .from("apps")
-      .select("id,name,description,icon_url,submission_type,status,platform,play_url,test_url,start_date,end_date")
-      .eq("status", APP_STATUS.APPROVED)
-      .or(escapedQuery ? `name.ilike.%${escapedQuery}%,description.ilike.%${escapedQuery}%` : "id.not.is.null")
-      .order("created_at", { ascending: false }),
-    recentAppsQuery,
-    expiringAppsQuery,
+    prisma.app.count(),
+    prisma.app.count({ where: { status: "pending" } }),
+    prisma.app.count({ where: { status: "approved" } }),
+    prisma.app.count({ where: { status: "rejected" } }),
+    prisma.app.findMany({
+      where: searchFilter,
+      select: { id: true, name: true, submissionType: true, status: true },
+      orderBy: { createdAt: "desc" },
+      take: 5,
+    }),
+    prisma.app.findMany({
+      where: {
+        status: "approved",
+        endDate: { not: null, gte: todayIso, lte: expiringLimitIso },
+        ...searchFilter,
+      },
+      select: { id: true, name: true, endDate: true },
+      orderBy: { endDate: "asc" },
+      take: 5,
+    }),
+    prisma.app.findMany({
+      where: {
+        status: "approved",
+        ...searchFilter,
+      },
+      orderBy: { createdAt: "desc" },
+      include: {
+        _count: { select: { testRequests: true } },
+      },
+    }),
   ]);
 
-  if (approvedAppsResult.error) {
-    throw new Error(approvedAppsResult.error.message);
-  }
-
-  if (recentResult.error) {
-    throw new Error(recentResult.error.message);
-  }
-
-  if (expiringResult.error) {
-    throw new Error(expiringResult.error.message);
-  }
-
   const stats = {
-    total: totalResult.count ?? 0,
-    pending: pendingResult.count ?? 0,
-    approved: approvedResult.count ?? 0,
-    rejected: rejectedResult.count ?? 0,
+    total: totalCount,
+    pending: pendingCount,
+    approved: approvedCount,
+    rejected: rejectedCount,
   };
 
-  const recentApps: Pick<App, "id" | "name" | "submission_type" | "status">[] = recentResult.data ?? [];
-  const expiringApps: Pick<App, "id" | "name" | "end_date">[] = expiringResult.data ?? [];
-  const approvedApps: App[] = approvedAppsResult.data ?? [];
+  const serializedApprovedApps: SerializedApp[] = approvedApps.map((app) => ({
+    ...app,
+    createdAt: app.createdAt.toISOString(),
+    updatedAt: app.updatedAt.toISOString(),
+    testerCount: app._count.testRequests,
+  }));
 
   const adminAppsBase = new URLSearchParams();
   if (query) {
@@ -205,11 +194,11 @@ export default async function AdminDashboardPage({
                       <div key={app.id} className="flex items-center justify-between">
                         <div className="min-w-0">
                           <p className="text-sm font-medium truncate">{app.name}</p>
-                          <p className="text-xs text-gray-500">{submissionTypeLabels[app.submission_type]}</p>
+                          <p className="text-xs text-gray-500">{submissionTypeLabels[app.submissionType]}</p>
                         </div>
                         <div className="flex items-center gap-2">
-                          <Badge variant={app.submission_type === "live" ? "success" : "warning"}>
-                            {submissionTypeLabels[app.submission_type]}
+                          <Badge variant={app.submissionType === "live" ? "success" : "warning"}>
+                            {submissionTypeLabels[app.submissionType]}
                           </Badge>
                           <Badge variant={statusVariants[app.status] || "default"}>
                             {statusLabels[app.status] || app.status}
@@ -242,7 +231,7 @@ export default async function AdminDashboardPage({
                       <div key={app.id} className="flex items-center justify-between">
                         <span className="text-sm font-medium">{app.name}</span>
                         <span className="text-xs text-gray-500">
-                          {app.end_date ? new Date(app.end_date).toLocaleDateString("tr-TR") : "-"}
+                          {app.endDate ? new Date(app.endDate).toLocaleDateString("tr-TR") : "-"}
                         </span>
                       </div>
                     ))}
@@ -253,7 +242,7 @@ export default async function AdminDashboardPage({
           </Link>
         </div>
 
-        <AdminAppsBoard apps={approvedApps} query={query} />
+        <AdminAppsBoard apps={serializedApprovedApps} query={query} />
       </main>
     </div>
   );

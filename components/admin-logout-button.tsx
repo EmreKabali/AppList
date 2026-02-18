@@ -1,26 +1,16 @@
 "use client";
 
-import { useRouter } from "next/navigation";
-import { createClient } from "@/lib/supabase/client";
+import { signOut } from "next-auth/react";
 
 interface AdminLogoutButtonProps {
   className?: string;
 }
 
 export function AdminLogoutButton({ className }: AdminLogoutButtonProps) {
-  const router = useRouter();
-
-  const handleLogout = async () => {
-    const supabase = createClient();
-    await supabase.auth.signOut();
-    router.push("/login");
-    router.refresh();
-  };
-
   return (
     <button
       type="button"
-      onClick={handleLogout}
+      onClick={() => signOut({ callbackUrl: "/login" })}
       className={className}
     >
       Çıkış

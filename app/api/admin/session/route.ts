@@ -1,29 +1,24 @@
 import { NextResponse } from "next/server";
-import { getAdminSessionContext } from "@/lib/admin-auth";
-import { createClient } from "@/lib/supabase/server";
+import { getSessionContext } from "@/lib/auth-helpers";
 import type { ApiResponse } from "@/types";
 
 interface AdminSessionResponse {
   email: string;
-  role: "admin" | "super_admin";
+  role: string;
+  name: string | null;
 }
 
 export async function GET() {
-  const supabase = await createClient();
-  const {
-    data: { user },
-    error,
-  } = await supabase.auth.getUser();
+  const context = await getSessionContext();
 
-  if (error || !user) {
+  if (!context) {
     return NextResponse.json<ApiResponse>(
       { success: false, error: "Unauthorized" },
       { status: 401 }
     );
   }
 
-  const adminContext = await getAdminSessionContext();
-  if (!adminContext) {
+  if (context.role !== "admin" && context.role !== "super_admin") {
     return NextResponse.json<ApiResponse>(
       { success: false, error: "Bu hesap admin paneli için yetkili değil" },
       { status: 403 }
@@ -33,8 +28,9 @@ export async function GET() {
   return NextResponse.json<ApiResponse<AdminSessionResponse>>({
     success: true,
     data: {
-      email: adminContext.email,
-      role: adminContext.role,
+      email: context.email,
+      role: context.role,
+      name: context.name,
     },
   });
 }

@@ -5,7 +5,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { ToastNotification } from "@/components/ui/toast-notification";
-import { createClient } from "@/lib/supabase/client";
+import { changePassword } from "@/lib/api";
 
 interface FormState {
   currentPassword: string;
@@ -53,42 +53,19 @@ export function ChangePasswordCard() {
     }
 
     setLoading(true);
-    const supabase = createClient();
 
-    const {
-      data: { user },
-      error: userError,
-    } = await supabase.auth.getUser();
-
-    if (userError || !user?.email) {
-      setToast({ message: "Kullanıcı doğrulanamadı. Tekrar giriş yapın.", variant: "error" });
-      setLoading(false);
-      return;
-    }
-
-    const { error: reauthError } = await supabase.auth.signInWithPassword({
-      email: user.email,
-      password: form.currentPassword,
+    const response = await changePassword({
+      currentPassword: form.currentPassword,
+      newPassword: form.newPassword,
     });
 
-    if (reauthError) {
-      setToast({ message: "Mevcut şifre hatalı.", variant: "error" });
-      setLoading(false);
-      return;
+    if (response.success) {
+      setToast({ message: "Şifreniz güncellendi.", variant: "success" });
+      setForm(INITIAL_FORM_STATE);
+    } else {
+      setToast({ message: response.error || "Şifre güncellenemedi.", variant: "error" });
     }
 
-    const { error: updateError } = await supabase.auth.updateUser({
-      password: form.newPassword,
-    });
-
-    if (updateError) {
-      setToast({ message: updateError.message || "Şifre güncellenemedi.", variant: "error" });
-      setLoading(false);
-      return;
-    }
-
-    setToast({ message: "Şifreniz güncellendi.", variant: "success" });
-    setForm(INITIAL_FORM_STATE);
     setLoading(false);
   };
 

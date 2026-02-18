@@ -10,39 +10,52 @@ import { AdminLogoutButton } from "@/components/admin-logout-button";
 import { ChangePasswordCard } from "@/components/change-password-card";
 import { ToastNotification } from "@/components/ui/toast-notification";
 import { getAdminUsers, createAdminUser, deleteAdminUser } from "@/lib/api";
-import { ADMIN_ROLES } from "@/lib/constants";
 import { formatDate } from "@/lib/utils";
-import type { AdminUser } from "@/types/database";
 
-type UserRole = "super_admin" | "admin";
+type UserRole = "super_admin" | "admin" | "user";
 
 const roleVariants: Record<UserRole, "default" | "success" | "warning" | "danger"> = {
   super_admin: "danger",
   admin: "warning",
+  user: "default",
 };
 
 const roleLabels: Record<UserRole, string> = {
   super_admin: "Super Admin",
   admin: "Admin",
+  user: "Kullanıcı",
 };
 
+interface SafeUser {
+  id: string;
+  name: string | null;
+  email: string;
+  role: string;
+  createdAt: string;
+  updatedAt: string;
+}
+
 export default function AdminUsersPage() {
-  const [users, setUsers] = useState<Omit<AdminUser, "password_hash">[]>([]);
+  const [users, setUsers] = useState<SafeUser[]>([]);
   const [loading, setLoading] = useState(true);
-  const [currentRole, setCurrentRole] = useState<UserRole | null>(null);
+  const [currentRole, setCurrentRole] = useState<string | null>(null);
   const [showForm, setShowForm] = useState(false);
-  const [formData, setFormData] = useState({ email: "", password: "", role: "admin" });
+  const [formData, setFormData] = useState({ email: "", password: "", role: "admin", name: "" });
   const [formLoading, setFormLoading] = useState(false);
   const [actionLoading, setActionLoading] = useState<string | null>(null);
   const [toast, setToast] = useState<{ message: string; variant: "success" | "error" } | null>(null);
+  const [roleFilter, setRoleFilter] = useState<string>("all");
 
   const canManageUsers = currentRole === "super_admin";
 
   const loadUsers = async () => {
     setLoading(true);
-    const response = await getAdminUsers({ limit: 100 });
+    const response = await getAdminUsers({
+      limit: 100,
+      role: roleFilter === "all" ? undefined : roleFilter,
+    });
     if (response.success && response.data) {
-      setUsers(response.data.data);
+      setUsers(response.data.data as unknown as SafeUser[]);
       setCurrentRole(response.data.currentRole);
       setToast(null);
     } else if (response.error) {
@@ -57,7 +70,7 @@ export default function AdminUsersPage() {
     }, 0);
 
     return () => globalThis.clearTimeout(timer);
-  }, []);
+  }, [roleFilter]);
 
   const handleCreateUser = async (e: React.BaseSyntheticEvent) => {
     e.preventDefault();
@@ -67,12 +80,13 @@ export default function AdminUsersPage() {
       email: formData.email,
       password: formData.password,
       role: formData.role,
+      name: formData.name,
     });
     if (response.success) {
       await loadUsers();
       setShowForm(false);
-      setFormData({ email: "", password: "", role: "admin" });
-      setToast({ message: "Yönetici başarıyla eklendi.", variant: "success" });
+      setFormData({ email: "", password: "", role: "admin", name: "" });
+      setToast({ message: "Kullanıcı başarıyla eklendi.", variant: "success" });
     } else if (response.error) {
       setToast({ message: response.error, variant: "error" });
     }
@@ -86,7 +100,7 @@ export default function AdminUsersPage() {
     const response = await deleteAdminUser(id);
     if (response.success) {
       setUsers((prev) => prev.filter((u) => u.id !== id));
-      setToast({ message: "Yönetici silindi.", variant: "success" });
+      setToast({ message: "Kullanıcı silindi.", variant: "success" });
     } else if (response.error) {
       setToast({ message: response.error, variant: "error" });
     }
@@ -119,12 +133,12 @@ export default function AdminUsersPage() {
       <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         <div className="mb-8 flex items-center justify-between">
           <div>
-            <h1 className="text-3xl font-bold text-gray-900">Yönetici Paneli</h1>
-            <p className="text-gray-600 mt-1">Yönetici hesabını ve yetkileri yönetin</p>
+            <h1 className="text-3xl font-bold text-gray-900">Kullanıcı Yönetimi</h1>
+            <p className="text-gray-600 mt-1">Tüm kullanıcıları ve yetkileri yönetin</p>
           </div>
           {canManageUsers && (
             <Button variant="primary" onClick={() => setShowForm(!showForm)}>
-              {showForm ? "İptal" : "Yeni Yönetici"}
+              {showForm ? "İptal" : "Yeni Kullanıcı"}
             </Button>
           )}
         </div>
@@ -138,19 +152,28 @@ export default function AdminUsersPage() {
         {showForm && canManageUsers && (
           <Card className="mb-6">
             <CardHeader>
-              <CardTitle>Yeni Yönetici Ekle</CardTitle>
+              <CardTitle>Yeni Kullanıcı Ekle</CardTitle>
             </CardHeader>
             <CardContent>
-              <form onSubmit={handleCreateUser} className="flex gap-4 items-end">
+              <form onSubmit={handleCreateUser} className="flex flex-wrap gap-4 items-end">
+                <Input
+                  id="user-name"
+                  label="Ad Soyad"
+                  type="text"
+                  placeholder="Ad Soyad"
+                  value={formData.name}
+                  onChange={(e) => setFormData({ ...formData, name: e.target.value })}
+                  className="flex-1 min-w-[150px]"
+                />
                 <Input
                   id="user-email"
                   label="E-posta"
                   type="email"
-                  placeholder="admin@example.com"
+                  placeholder="user@example.com"
                   value={formData.email}
                   onChange={(e) => setFormData({ ...formData, email: e.target.value })}
                   required
-                  className="flex-1"
+                  className="flex-1 min-w-[200px]"
                 />
                 <Input
                   id="user-password"
@@ -160,7 +183,7 @@ export default function AdminUsersPage() {
                   value={formData.password}
                   onChange={(e) => setFormData({ ...formData, password: e.target.value })}
                   required
-                  className="flex-1"
+                  className="flex-1 min-w-[150px]"
                 />
                 <div>
                   <label htmlFor="user-role" className="block text-sm font-medium text-gray-700 mb-1">Rol</label>
@@ -170,8 +193,9 @@ export default function AdminUsersPage() {
                     value={formData.role}
                     onChange={(e) => setFormData({ ...formData, role: e.target.value })}
                   >
-                    <option value={ADMIN_ROLES.ADMIN}>Admin</option>
-                    <option value={ADMIN_ROLES.SUPER_ADMIN}>Super Admin</option>
+                    <option value="user">Kullanıcı</option>
+                    <option value="admin">Admin</option>
+                    <option value="super_admin">Super Admin</option>
                   </select>
                 </div>
                 <Button type="submit" variant="primary" disabled={formLoading}>
@@ -184,7 +208,26 @@ export default function AdminUsersPage() {
 
         <Card>
           <CardHeader>
-            <CardTitle>Kullanıcılar</CardTitle>
+            <div className="flex items-center justify-between">
+              <CardTitle>Kullanıcılar</CardTitle>
+              <div className="flex items-center gap-2">
+                <span className="text-sm text-gray-600">Rol:</span>
+                {["all", "user", "admin", "super_admin"].map((r) => (
+                  <button
+                    key={r}
+                    type="button"
+                    onClick={() => setRoleFilter(r)}
+                    className={`px-3 py-1 rounded-md text-xs border transition-colors ${
+                      roleFilter === r
+                        ? "bg-white border-indigo-600 text-indigo-700"
+                        : "bg-gray-100 border-gray-200 text-gray-700 hover:bg-gray-200"
+                    }`}
+                  >
+                    {r === "all" ? "Tümü" : roleLabels[r as UserRole] || r}
+                  </button>
+                ))}
+              </div>
+            </div>
           </CardHeader>
           <CardContent>
             {loading ? (
@@ -194,6 +237,7 @@ export default function AdminUsersPage() {
                 <table className="w-full">
                   <thead>
                     <tr className="border-b border-gray-200">
+                      <th className="text-left py-3 px-4 text-sm font-medium text-gray-500">Ad</th>
                       <th className="text-left py-3 px-4 text-sm font-medium text-gray-500">E-posta</th>
                       <th className="text-left py-3 px-4 text-sm font-medium text-gray-500">Rol</th>
                       <th className="text-left py-3 px-4 text-sm font-medium text-gray-500">Oluşturulma</th>
@@ -203,19 +247,20 @@ export default function AdminUsersPage() {
                   <tbody>
                     {users.length === 0 ? (
                       <tr>
-                        <td colSpan={4} className="text-gray-500 text-sm text-center py-4">Kullanıcı bulunmuyor</td>
+                        <td colSpan={5} className="text-gray-500 text-sm text-center py-4">Kullanıcı bulunmuyor</td>
                       </tr>
                     ) : (
                       users.map((user) => (
                         <tr key={user.id} className="border-b border-gray-100 hover:bg-gray-50">
-                          <td className="py-3 px-4 text-sm font-medium text-gray-900">{user.email}</td>
+                          <td className="py-3 px-4 text-sm font-medium text-gray-900">{user.name || "-"}</td>
+                          <td className="py-3 px-4 text-sm text-gray-600">{user.email}</td>
                           <td className="py-3 px-4">
                             <Badge variant={roleVariants[user.role as UserRole] || "default"}>
                               {roleLabels[user.role as UserRole] || user.role}
                             </Badge>
                           </td>
                           <td className="py-3 px-4 text-sm text-gray-500">
-                            {user.created_at ? formatDate(user.created_at) : "-"}
+                            {user.createdAt ? formatDate(user.createdAt) : "-"}
                           </td>
                           <td className="py-3 px-4 text-right">
                             {canManageUsers ? (

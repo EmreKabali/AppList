@@ -12,7 +12,7 @@ import { AdminLogoutButton } from "@/components/admin-logout-button";
 import { deleteAdminApp, getAdminApps, updateAdminApp, updateAppStatus } from "@/lib/api";
 import { APP_STATUS } from "@/lib/constants";
 import { formatDate } from "@/lib/utils";
-import type { App } from "@/types/database";
+import type { SerializedApp } from "@/types";
 
 const statusLabels: Record<string, string> = {
   pending: "Beklemede",
@@ -26,7 +26,7 @@ const statusVariants: Record<string, "default" | "success" | "warning" | "danger
   rejected: "danger",
 };
 
-const submissionTypeLabels: Record<App["submission_type"], string> = {
+const submissionTypeLabels: Record<string, string> = {
   live: "Yayında",
   test: "Test",
 };
@@ -48,19 +48,19 @@ const statusFilterOptions: { value: StatusFilter; label: string }[] = [
 
 type EditFormState = {
   name: string;
-  submission_type: App["submission_type"];
+  submissionType: "live" | "test";
   platform: "android" | "ios" | "";
-  play_url: string;
+  playUrl: string;
   description: string;
-  icon_url: string;
-  start_date: string;
-  end_date: string;
+  iconUrl: string;
+  startDate: string;
+  endDate: string;
 };
 
 function AdminAppsPageContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
-  const [apps, setApps] = useState<App[]>([]);
+  const [apps, setApps] = useState<SerializedApp[]>([]);
   const [loading, setLoading] = useState(true);
   const [actionLoading, setActionLoading] = useState<string | null>(null);
   const [actionError, setActionError] = useState<string>("");
@@ -150,7 +150,7 @@ function AdminAppsPageContent() {
       });
       if (isCancelled) return;
       if (response.success && response.data) {
-        setApps(response.data.data);
+        setApps(response.data.data as unknown as SerializedApp[]);
       } else {
         setApps([]);
       }
@@ -181,24 +181,24 @@ function AdminAppsPageContent() {
     setActionLoading(id);
     const response = await updateAppStatus(id, status);
     if (response.success) {
-      setApps((prev) => prev.map((app) => (app.id === id ? { ...app, status: status as App["status"] } : app)));
+      setApps((prev) => prev.map((app) => (app.id === id ? { ...app, status: status as SerializedApp["status"] } : app)));
     } else {
       setActionError(response.error || "Durum güncellenirken bir hata oluştu");
     }
     setActionLoading(null);
   };
 
-  const startEdit = (app: App) => {
+  const startEdit = (app: SerializedApp) => {
     setEditingAppId(app.id);
     setEditForm({
       name: app.name,
-      submission_type: app.submission_type,
+      submissionType: app.submissionType,
       platform: app.platform ?? "",
-      play_url: app.play_url ?? "",
+      playUrl: app.playUrl ?? "",
       description: app.description ?? "",
-      icon_url: app.icon_url ?? "",
-      start_date: app.start_date ?? "",
-      end_date: app.end_date ?? "",
+      iconUrl: app.iconUrl ?? "",
+      startDate: app.startDate ?? "",
+      endDate: app.endDate ?? "",
     });
   };
 
@@ -218,21 +218,21 @@ function AdminAppsPageContent() {
     setActionLoading(editingAppId);
     const payload = {
       name: editForm.name.trim(),
-      submission_type: editForm.submission_type,
+      submissionType: editForm.submissionType,
       platform:
-        editForm.submission_type === "live"
+        editForm.submissionType === "live"
           ? editForm.platform || null
           : null,
-      play_url: editForm.submission_type === "live" ? editForm.play_url || null : null,
-      description: editForm.submission_type === "live" ? editForm.description || null : null,
-      icon_url: editForm.icon_url || null,
-      start_date: editForm.submission_type === "test" ? editForm.start_date || null : null,
-      end_date: editForm.submission_type === "test" ? editForm.end_date || null : null,
+      playUrl: editForm.submissionType === "live" ? editForm.playUrl || null : null,
+      description: editForm.submissionType === "live" ? editForm.description || null : null,
+      iconUrl: editForm.iconUrl || null,
+      startDate: editForm.submissionType === "test" ? editForm.startDate || null : null,
+      endDate: editForm.submissionType === "test" ? editForm.endDate || null : null,
     };
 
     const response = await updateAdminApp(editingAppId, payload);
     if (response.success && response.data) {
-      setApps((prev) => prev.map((app) => (app.id === editingAppId ? response.data! : app)));
+      setApps((prev) => prev.map((app) => (app.id === editingAppId ? response.data as unknown as SerializedApp : app)));
       cancelEdit();
     } else {
       setActionError(response.error || "Uygulama kaydedilemedi");
@@ -260,8 +260,8 @@ function AdminAppsPageContent() {
 
   const typeStats = {
     all: apps.length,
-    live: apps.filter((app) => app.submission_type === "live").length,
-    test: apps.filter((app) => app.submission_type === "test").length,
+    live: apps.filter((app) => app.submissionType === "live").length,
+    test: apps.filter((app) => app.submissionType === "test").length,
   };
 
   return (
@@ -314,39 +314,20 @@ function AdminAppsPageContent() {
             {submissionTypeFilter === "live" && (
               <div className="mb-4 flex flex-wrap items-center gap-2">
                 <span className="text-sm font-medium text-[var(--foreground)]">Platform:</span>
-                <button
-                  type="button"
-                  onClick={() => updateFilters({ platform: null })}
-                  className={`px-3 py-1.5 rounded-md text-sm border transition-colors ${
-                    platformFilter === null
-                      ? "bg-white border-indigo-600 text-indigo-700"
-                      : "bg-gray-100 border-gray-200 text-gray-700 hover:bg-gray-200"
-                  }`}
-                >
-                  Tümü
-                </button>
-                <button
-                  type="button"
-                  onClick={() => updateFilters({ platform: "android" })}
-                  className={`px-3 py-1.5 rounded-md text-sm border transition-colors ${
-                    platformFilter === "android"
-                      ? "bg-white border-indigo-600 text-indigo-700"
-                      : "bg-gray-100 border-gray-200 text-gray-700 hover:bg-gray-200"
-                  }`}
-                >
-                  Android
-                </button>
-                <button
-                  type="button"
-                  onClick={() => updateFilters({ platform: "ios" })}
-                  className={`px-3 py-1.5 rounded-md text-sm border transition-colors ${
-                    platformFilter === "ios"
-                      ? "bg-white border-indigo-600 text-indigo-700"
-                      : "bg-gray-100 border-gray-200 text-gray-700 hover:bg-gray-200"
-                  }`}
-                >
-                  iOS
-                </button>
+                {([null, "android", "ios"] as const).map((p) => (
+                  <button
+                    key={p ?? "all"}
+                    type="button"
+                    onClick={() => updateFilters({ platform: p })}
+                    className={`px-3 py-1.5 rounded-md text-sm border transition-colors ${
+                      platformFilter === p
+                        ? "bg-white border-indigo-600 text-indigo-700"
+                        : "bg-gray-100 border-gray-200 text-gray-700 hover:bg-gray-200"
+                    }`}
+                  >
+                    {p === null ? "Tümü" : p === "android" ? "Android" : "iOS"}
+                  </button>
+                ))}
               </div>
             )}
 
@@ -420,9 +401,9 @@ function AdminAppsPageContent() {
                           <td className="py-3 px-4">
                             <div>
                               <p className="text-sm font-medium text-[var(--foreground)]">{app.name}</p>
-                              {app.play_url && (
+                              {app.playUrl && (
                                 <a
-                                  href={app.play_url}
+                                  href={app.playUrl}
                                   target="_blank"
                                   rel="noopener noreferrer"
                                   className="text-xs text-[var(--primary)] hover:text-[var(--accent)] hover:underline transition-colors"
@@ -433,8 +414,8 @@ function AdminAppsPageContent() {
                             </div>
                           </td>
                           <td className="py-3 px-4">
-                            <Badge variant={app.submission_type === "live" ? "success" : "warning"}>
-                              {submissionTypeLabels[app.submission_type]}
+                            <Badge variant={app.submissionType === "live" ? "success" : "warning"}>
+                              {submissionTypeLabels[app.submissionType]}
                             </Badge>
                           </td>
                           <td className="py-3 px-4 text-sm text-[var(--muted-foreground)]">
@@ -446,10 +427,10 @@ function AdminAppsPageContent() {
                             </Badge>
                           </td>
                           <td className="py-3 px-4 text-sm text-[var(--muted-foreground)]">
-                            {app.start_date ? formatDate(app.start_date) : "-"}
+                            {app.startDate ? formatDate(app.startDate) : "-"}
                           </td>
                           <td className="py-3 px-4 text-sm text-[var(--muted-foreground)]">
-                            {app.end_date ? formatDate(app.end_date) : "-"}
+                            {app.endDate ? formatDate(app.endDate) : "-"}
                           </td>
                           <td className="py-3 px-4 text-right">
                             <div className="flex justify-end gap-2">
@@ -544,13 +525,13 @@ function AdminAppsPageContent() {
                     <label htmlFor="edit-submission-type" className="block text-sm font-medium text-[var(--foreground)] mb-1.5">Gönderim Türü</label>
                     <select
                       id="edit-submission-type"
-                      value={editForm.submission_type}
+                      value={editForm.submissionType}
                       onChange={(e) =>
                         setEditForm((prev) =>
                           prev
                             ? {
                               ...prev,
-                              submission_type: e.target.value as App["submission_type"],
+                              submissionType: e.target.value as "live" | "test",
                               platform: e.target.value === "test" ? "" : prev.platform,
                             }
                             : prev
@@ -571,7 +552,7 @@ function AdminAppsPageContent() {
                       onChange={(e) =>
                         setEditForm((prev) => (prev ? { ...prev, platform: e.target.value as "android" | "ios" | "" } : prev))
                       }
-                      disabled={editForm.submission_type === "test"}
+                      disabled={editForm.submissionType === "test"}
                       className="w-full px-3.5 py-2.5 border border-[var(--border)] rounded-lg text-sm bg-[var(--background)] disabled:bg-gray-100"
                     >
                       <option value="">Seçiniz</option>
@@ -581,14 +562,14 @@ function AdminAppsPageContent() {
                   </div>
                 </div>
 
-                {editForm.submission_type === "live" ? (
+                {editForm.submissionType === "live" ? (
                   <>
                     <Input
                       id="edit-store-url"
                       label="Store URL"
                       type="url"
-                      value={editForm.play_url}
-                      onChange={(e) => setEditForm((prev) => (prev ? { ...prev, play_url: e.target.value } : prev))}
+                      value={editForm.playUrl}
+                      onChange={(e) => setEditForm((prev) => (prev ? { ...prev, playUrl: e.target.value } : prev))}
                     />
                     <div>
                       <label htmlFor="edit-description" className="block text-sm font-medium text-[var(--foreground)] mb-1.5">Açıklama</label>
@@ -607,15 +588,15 @@ function AdminAppsPageContent() {
                       id="edit-start-date"
                       label="Başlangıç Tarihi"
                       type="date"
-                      value={editForm.start_date}
-                      onChange={(e) => setEditForm((prev) => (prev ? { ...prev, start_date: e.target.value } : prev))}
+                      value={editForm.startDate}
+                      onChange={(e) => setEditForm((prev) => (prev ? { ...prev, startDate: e.target.value } : prev))}
                     />
                     <Input
                       id="edit-end-date"
                       label="Bitiş Tarihi"
                       type="date"
-                      value={editForm.end_date}
-                      onChange={(e) => setEditForm((prev) => (prev ? { ...prev, end_date: e.target.value } : prev))}
+                      value={editForm.endDate}
+                      onChange={(e) => setEditForm((prev) => (prev ? { ...prev, endDate: e.target.value } : prev))}
                     />
                   </div>
                 )}
@@ -624,8 +605,8 @@ function AdminAppsPageContent() {
                   id="edit-icon-url"
                   label="İkon/Görsel URL"
                   type="url"
-                  value={editForm.icon_url}
-                  onChange={(e) => setEditForm((prev) => (prev ? { ...prev, icon_url: e.target.value } : prev))}
+                  value={editForm.iconUrl}
+                  onChange={(e) => setEditForm((prev) => (prev ? { ...prev, iconUrl: e.target.value } : prev))}
                 />
 
                 <div className="flex justify-end">

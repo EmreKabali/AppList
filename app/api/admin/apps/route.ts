@@ -1,11 +1,11 @@
 import { NextResponse } from "next/server";
-import { createClient } from "@/lib/supabase/server";
-import { getAdminSessionContext } from "@/lib/admin-auth";
-import type { App, ApiResponse, PaginatedResponse } from "@/types";
+import { prisma } from "@/lib/prisma";
+import { getSessionContext } from "@/lib/auth-helpers";
+import type { ApiResponse, PaginatedResponse } from "@/types";
+import type { App } from "@prisma/client";
 import { APP_STATUS } from "@/lib/constants";
 
-type AppStatus = typeof APP_STATUS[keyof typeof APP_STATUS];
-
+type AppStatus = (typeof APP_STATUS)[keyof typeof APP_STATUS];
 type SubmissionType = "live" | "test";
 type PlatformType = "android" | "ios";
 
@@ -25,61 +25,64 @@ export async function GET(request: Request) {
   const q = searchParams.get("q")?.trim();
   const submissionType = searchParams.get("submission_type");
   const platform = searchParams.get("platform");
-  const normalizedQuery = q?.replace(/,/g, " ");
-  const offset = (page - 1) * limit;
+  const skip = (page - 1) * limit;
 
   try {
-    const adminContext = await getAdminSessionContext();
-    if (!adminContext) {
+    const context = await getSessionContext();
+    if (!context || (context.role !== "admin" && context.role !== "super_admin")) {
       return NextResponse.json<ApiResponse>(
         { success: false, error: "Unauthorized" },
         { status: 401 }
       );
     }
 
-    const supabase = await createClient();
-
-    let query = supabase.from("apps").select("*", { count: "exact" });
+    const where: Record<string, unknown> = {};
 
     if (status && Object.values(APP_STATUS).includes(status as AppStatus)) {
-      query = query.eq("status", status);
+      where.status = status;
     }
 
     if (submissionType && isValidSubmissionType(submissionType)) {
-      query = query.eq("submission_type", submissionType);
+      where.submissionType = submissionType;
     }
 
     if (platform && isValidPlatform(platform)) {
-      query = query.eq("platform", platform);
+      where.platform = platform;
     }
 
-    if (normalizedQuery) {
-      query = query.or(`name.ilike.%${normalizedQuery}%,description.ilike.%${normalizedQuery}%`);
+    if (q) {
+      const normalizedQuery = q.replace(/,/g, " ");
+      where.OR = [
+        { name: { contains: normalizedQuery } },
+        { description: { contains: normalizedQuery } },
+      ];
     }
 
-    const { data: apps, error, count } = await query
-      .order("created_at", { ascending: false })
-      .range(offset, offset + limit - 1);
-
-    if (error) {
-      return NextResponse.json<ApiResponse<PaginatedResponse<App>>>(
-        { success: false, error: error.message },
-        { status: 500 }
-      );
-    }
+    const [apps, count] = await Promise.all([
+      prisma.app.findMany({
+        where,
+        orderBy: { createdAt: "desc" },
+        skip,
+        take: limit,
+        include: {
+          _count: { select: { testRequests: true } },
+        },
+      }),
+      prisma.app.count({ where }),
+    ]);
 
     return NextResponse.json<ApiResponse<PaginatedResponse<App>>>({
       success: true,
       data: {
-        data: (apps || []) as App[],
-        total: count || 0,
+        data: apps as unknown as App[],
+        total: count,
         page,
         limit,
-        totalPages: Math.ceil((count || 0) / limit),
+        totalPages: Math.ceil(count / limit),
       },
     });
   } catch {
-    return NextResponse.json<ApiResponse<PaginatedResponse<App>>>(
+    return NextResponse.json<ApiResponse>(
       { success: false, error: "Internal server error" },
       { status: 500 }
     );
@@ -88,17 +91,15 @@ export async function GET(request: Request) {
 
 export async function PATCH(request: Request) {
   try {
-    const adminContext = await getAdminSessionContext();
-    if (!adminContext) {
+    const context = await getSessionContext();
+    if (!context || (context.role !== "admin" && context.role !== "super_admin")) {
       return NextResponse.json<ApiResponse>(
         { success: false, error: "Unauthorized" },
         { status: 401 }
       );
     }
 
-    const supabase = await createClient();
     const body = await request.json();
-
     const { id } = body;
 
     if (!id) {
@@ -120,14 +121,15 @@ export async function PATCH(request: Request) {
       updates.status = body.status;
     }
 
-    if (body.submission_type !== undefined) {
-      if (!isValidSubmissionType(body.submission_type)) {
+    if (body.submissionType !== undefined || body.submission_type !== undefined) {
+      const st = body.submissionType ?? body.submission_type;
+      if (!isValidSubmissionType(st)) {
         return NextResponse.json<ApiResponse>(
-          { success: false, error: "submission_type must be live or test" },
+          { success: false, error: "submissionType must be live or test" },
           { status: 400 }
         );
       }
-      updates.submission_type = body.submission_type;
+      updates.submissionType = st;
     }
 
     if (body.platform !== undefined) {
@@ -150,32 +152,43 @@ export async function PATCH(request: Request) {
       updates.name = body.name.trim();
     }
 
-    const optionalTextFields = ["play_url", "description", "icon_url", "start_date", "end_date"] as const;
-    for (const field of optionalTextFields) {
-      if (body[field] !== undefined) {
-        if (body[field] !== null && typeof body[field] !== "string") {
+    const fieldMap: Record<string, string> = {
+      playUrl: "playUrl",
+      play_url: "playUrl",
+      description: "description",
+      iconUrl: "iconUrl",
+      icon_url: "iconUrl",
+      startDate: "startDate",
+      start_date: "startDate",
+      endDate: "endDate",
+      end_date: "endDate",
+    };
+
+    for (const [bodyKey, prismaKey] of Object.entries(fieldMap)) {
+      if (body[bodyKey] !== undefined) {
+        if (body[bodyKey] !== null && typeof body[bodyKey] !== "string") {
           return NextResponse.json<ApiResponse>(
-            { success: false, error: `${field} must be string or null` },
+            { success: false, error: `${bodyKey} must be string or null` },
             { status: 400 }
           );
         }
-        updates[field] = body[field];
+        updates[prismaKey] = body[bodyKey];
       }
     }
 
     if (
-      updates.submission_type === "test" &&
+      updates.submissionType === "test" &&
       Object.prototype.hasOwnProperty.call(updates, "platform") &&
       updates.platform !== null
     ) {
       return NextResponse.json<ApiResponse>(
-        { success: false, error: "test submission_type cannot have a platform" },
+        { success: false, error: "test submissionType cannot have a platform" },
         { status: 400 }
       );
     }
 
     if (
-      updates.submission_type === "test" &&
+      updates.submissionType === "test" &&
       !Object.prototype.hasOwnProperty.call(updates, "platform")
     ) {
       updates.platform = null;
@@ -188,19 +201,10 @@ export async function PATCH(request: Request) {
       );
     }
 
-    const { data, error } = await supabase
-      .from("apps")
-      .update(updates as never)
-      .eq("id", id)
-      .select()
-      .single();
-
-    if (error) {
-      return NextResponse.json<ApiResponse>(
-        { success: false, error: error.message },
-        { status: 500 }
-      );
-    }
+    const data = await prisma.app.update({
+      where: { id },
+      data: updates,
+    });
 
     return NextResponse.json<ApiResponse>({ success: true, data });
   } catch {
@@ -213,15 +217,14 @@ export async function PATCH(request: Request) {
 
 export async function DELETE(request: Request) {
   try {
-    const adminContext = await getAdminSessionContext();
-    if (!adminContext) {
+    const context = await getSessionContext();
+    if (!context || (context.role !== "admin" && context.role !== "super_admin")) {
       return NextResponse.json<ApiResponse>(
         { success: false, error: "Unauthorized" },
         { status: 401 }
       );
     }
 
-    const supabase = await createClient();
     const { searchParams } = new URL(request.url);
     const id = searchParams.get("id");
 
@@ -232,14 +235,7 @@ export async function DELETE(request: Request) {
       );
     }
 
-    const { error } = await supabase.from("apps").delete().eq("id", id);
-
-    if (error) {
-      return NextResponse.json<ApiResponse>(
-        { success: false, error: error.message },
-        { status: 500 }
-      );
-    }
+    await prisma.app.delete({ where: { id } });
 
     return NextResponse.json<ApiResponse>({ success: true });
   } catch {

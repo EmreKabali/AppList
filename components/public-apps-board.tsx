@@ -3,13 +3,13 @@
 import { useMemo, useState } from "react";
 import { AppCard } from "@/components/app-card";
 import { StatsCard } from "@/components/stats-card";
-import type { App } from "@/types/database";
+import type { SerializedApp } from "@/types";
 
 type ViewType = "live" | "active-test" | "expired-test";
 type PlatformFilter = "android" | "ios" | null;
 
 interface PublicAppsBoardProps {
-  apps: App[];
+  apps: SerializedApp[];
   initialView: ViewType;
   initialPlatformFilter: PlatformFilter;
 }
@@ -21,33 +21,33 @@ export function PublicAppsBoard({ apps, initialView, initialPlatformFilter }: Re
   const [platformFilter, setPlatformFilter] = useState<PlatformFilter>(initialPlatformFilter);
 
   const stats = useMemo(() => {
-    const liveApps = apps.filter((app) => app.submission_type === "live");
-    const testApps = apps.filter((app) => app.submission_type === "test");
+    const liveApps = apps.filter((app) => app.submissionType === "live");
+    const testApps = apps.filter((app) => app.submissionType === "test");
 
     return {
       total: apps.length,
       live: liveApps.length,
-      activeTests: testApps.filter((app) => !app.end_date || app.end_date >= TODAY_ISO).length,
-      expiredTests: testApps.filter((app) => app.end_date !== null && app.end_date < TODAY_ISO).length,
+      activeTests: testApps.filter((app) => !app.endDate || app.endDate >= TODAY_ISO).length,
+      expiredTests: testApps.filter((app) => app.endDate !== null && app.endDate < TODAY_ISO).length,
     };
   }, [apps]);
 
   const currentApps = useMemo(() => {
     if (view === "live") {
       if (!platformFilter) {
-        return apps.filter((app) => app.submission_type === "live");
+        return apps.filter((app) => app.submissionType === "live");
       }
-      return apps.filter((app) => app.submission_type === "live" && app.platform === platformFilter);
+      return apps.filter((app) => app.submissionType === "live" && app.platform === platformFilter);
     }
 
     if (view === "active-test") {
       return apps.filter(
-        (app) => app.submission_type === "test" && (!app.end_date || app.end_date >= TODAY_ISO)
+        (app) => app.submissionType === "test" && (!app.endDate || app.endDate >= TODAY_ISO)
       );
     }
 
     return apps.filter(
-      (app) => app.submission_type === "test" && app.end_date !== null && app.end_date < TODAY_ISO
+      (app) => app.submissionType === "test" && app.endDate !== null && app.endDate < TODAY_ISO
     );
   }, [apps, platformFilter, view]);
 
