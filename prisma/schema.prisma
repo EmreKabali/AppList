@@ -1,6 +1,7 @@
 datasource db {
   provider = "sqlserver"
   url      = env("DATABASE_URL")
+  schemas  = ["gunceel_googletest"]
 }
 
 generator client {
@@ -22,6 +23,7 @@ model User {
   testRequests TestRequest[]
 
   @@map("users")
+  @@schema("gunceel_googletest")
 }
 
 model App {
@@ -44,6 +46,7 @@ model App {
   testRequests TestRequest[]
 
   @@map("apps")
+  @@schema("gunceel_googletest")
 }
 
 model TestRequest {
@@ -57,6 +60,7 @@ model TestRequest {
 
   @@unique([appId, userId])
   @@map("test_requests")
+  @@schema("gunceel_googletest")
 }
 
 // NextAuth.js required models
@@ -79,6 +83,7 @@ model Account {
 
   @@unique([provider, providerAccountId])
   @@map("accounts")
+  @@schema("gunceel_googletest")
 }
 
 model Session {
@@ -90,6 +95,7 @@ model Session {
   user User @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@map("sessions")
+  @@schema("gunceel_googletest")
 }
 
 model VerificationToken {
@@ -99,4 +105,5 @@ model VerificationToken {
 
   @@unique([identifier, token])
   @@map("verification_tokens")
+  @@schema("gunceel_googletest")
 }
