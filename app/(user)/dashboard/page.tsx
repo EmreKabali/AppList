@@ -169,6 +169,15 @@ export default function DashboardPage() {
     setAppActionLoading(null);
   };
 
+  const handleCopyToClipboard = async (value: string, successMessage: string) => {
+    try {
+      await navigator.clipboard.writeText(value);
+      setToast({ message: successMessage, variant: "success" });
+    } catch {
+      setToast({ message: "Link kopyalanamadı", variant: "error" });
+    }
+  };
+
   return (
     <div className="min-h-screen bg-gray-50">
       {toast && (
@@ -281,8 +290,22 @@ export default function DashboardPage() {
                                     {app.testRequests && app.testRequests.length > 0 ? (
                                       <ul className="mt-1 space-y-1">
                                         {app.testRequests.map((tester) => (
-                                          <li key={tester.id} className="text-xs text-gray-600">
-                                            {(tester.user.name || "İsimsiz kullanıcı")} - {tester.user.email}
+                                          <li key={tester.id} className="text-xs text-gray-600 flex items-center gap-2">
+                                            <span>{(tester.user.name || "İsimsiz kullanıcı")} - {tester.user.email}</span>
+                                            <Button
+                                              type="button"
+                                              size="sm"
+                                              variant="outline"
+                                              className="h-6 px-2 text-[11px]"
+                                              onClick={() =>
+                                                void handleCopyToClipboard(
+                                                  tester.user.email,
+                                                  "Tester e-posta adresi kopyalandı"
+                                                )
+                                              }
+                                            >
+                                              Kopyala
+                                            </Button>
                                           </li>
                                         ))}
                                       </ul>
@@ -425,7 +448,7 @@ export default function DashboardPage() {
                       <thead>
                         <tr className="border-b border-gray-200">
                           <th className="text-left py-3 px-4 text-sm font-medium text-gray-500">Uygulama</th>
-                          <th className="text-left py-3 px-4 text-sm font-medium text-gray-500">Durum</th>
+                          <th className="text-left py-3 px-4 text-sm font-medium text-gray-500">Test Linki</th>
                           <th className="text-left py-3 px-4 text-sm font-medium text-gray-500">Kayıt Tarihi</th>
                         </tr>
                       </thead>
@@ -434,9 +457,34 @@ export default function DashboardPage() {
                           <tr key={tr.id} className="border-b border-gray-100 hover:bg-gray-50">
                             <td className="py-3 px-4 text-sm font-medium text-gray-900">{tr.app.name}</td>
                             <td className="py-3 px-4">
-                              <Badge variant={statusVariants[tr.app.status] || "default"}>
-                                {statusLabels[tr.app.status] || tr.app.status}
-                              </Badge>
+                              {tr.app.testUrl ? (
+                                <div className="flex items-center gap-2">
+                                  <a
+                                    href={tr.app.testUrl}
+                                    target="_blank"
+                                    rel="noopener noreferrer"
+                                    className="text-sm text-indigo-600 hover:text-indigo-800 underline underline-offset-2"
+                                  >
+                                    Linki Aç
+                                  </a>
+                                  <Button
+                                    type="button"
+                                    size="sm"
+                                    variant="outline"
+                                    className="h-7 text-xs"
+                                    onClick={() =>
+                                      void handleCopyToClipboard(
+                                        tr.app.testUrl ?? "",
+                                        "Test linki kopyalandı"
+                                      )
+                                    }
+                                  >
+                                    Kopyala
+                                  </Button>
+                                </div>
+                              ) : (
+                                <span className="text-sm text-gray-500">Link yok</span>
+                              )}
                             </td>
                             <td className="py-3 px-4 text-sm text-gray-500">
                               {formatDate(tr.createdAt)}

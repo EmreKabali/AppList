@@ -1,3 +1,6 @@
+"use client";
+
+import { useState } from "react";
 import { Card } from "./ui/card";
 import { Badge } from "./ui/badge";
 import { Button } from "./ui/button";
@@ -17,6 +20,7 @@ interface AppCardProps {
 }
 
 export function AppCard({ app }: Readonly<AppCardProps>) {
+  const [copied, setCopied] = useState(false);
   const linkUrl = app.playUrl ?? app.testUrl;
   const storeLabel =
     app.platform === "ios" || linkUrl?.includes("apps.apple.com") ? "App Store" : "Play Store";
@@ -27,6 +31,18 @@ export function AppCard({ app }: Readonly<AppCardProps>) {
     return null;
   };
   const platformLabel = getPlatformLabel();
+
+  const handleCopyTestLink = async () => {
+    if (!app.testUrl) return;
+
+    try {
+      await navigator.clipboard.writeText(app.testUrl);
+      setCopied(true);
+      setTimeout(() => setCopied(false), 1500);
+    } catch {
+      setCopied(false);
+    }
+  };
 
   return (
     <Card className="group p-5 hover:shadow-xl hover:shadow-indigo-500/10 transition-all duration-300 border-gray-100 bg-white/50 backdrop-blur-sm hover:border-indigo-500/30">
@@ -83,8 +99,32 @@ export function AppCard({ app }: Readonly<AppCardProps>) {
               )}
             </div>
 
-            <div className="flex items-center gap-2 ml-auto opacity-0 group-hover:opacity-100 transition-opacity duration-300">
-              {linkUrl && (
+            <div
+              className={`flex items-center gap-2 ml-auto transition-opacity duration-300 ${app.submissionType === "test" ? "opacity-100" : "opacity-0 group-hover:opacity-100"
+                }`}
+            >
+              {app.submissionType === "test" && app.testUrl ? (
+                <>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    className="h-8 gap-1.5 font-semibold border-indigo-200 text-indigo-600 hover:bg-indigo-600 hover:text-white transition-all shadow-sm"
+                    onClick={() => globalThis.open(app.testUrl ?? "", "_blank", "noopener,noreferrer")}
+                  >
+                    Test Linki
+                    <ExternalLink className="h-3.5 w-3.5" />
+                  </Button>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    className="h-8 font-semibold"
+                    onClick={handleCopyTestLink}
+                  >
+                    {copied ? "Kopyalandı" : "Kopyala"}
+                  </Button>
+                </>
+              ) : (
+                linkUrl && (
                 <Button
                   variant="outline"
                   size="sm"
@@ -94,6 +134,7 @@ export function AppCard({ app }: Readonly<AppCardProps>) {
                   {storeLabel}
                   <ExternalLink className="h-3.5 w-3.5" />
                 </Button>
+                )
               )}
             </div>
           </div>

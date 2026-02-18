@@ -1,5 +1,6 @@
 import { Header } from "@/components/header";
 import { PublicAppsBoard } from "@/components/public-apps-board";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { prisma } from "@/lib/prisma";
 
 type ViewType = "live" | "active-test" | "expired-test";
@@ -50,6 +51,44 @@ export default async function HomePage({
           <h2 className="text-2xl font-bold text-gray-900 mb-2">App Takip Paneli</h2>
           <p className="text-gray-600">Kartlara tıklayarak yayında ve test süreçlerini takip edin</p>
         </div>
+
+        <Card className="mb-6 border-indigo-200 bg-indigo-50/40 hover:shadow-sm">
+          <CardHeader className="mb-2">
+            <CardTitle className="text-base text-indigo-900">Önemli Bilgilendirme</CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-3 text-sm text-gray-700">
+            <p>
+              Aşağıdaki Google gruplara katılarak, gruptaki herkesi otomatik tester olarak eklemiş
+              olursunuz.
+            </p>
+            <ul className="list-disc space-y-1 pl-5">
+              <li>
+                <a
+                  href="https://groups.google.com/g/google-play-testers-trkiye"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="text-indigo-700 underline underline-offset-2 hover:text-indigo-900"
+                >
+                  google-play-testers-trkiye
+                </a>
+              </li>
+              <li>
+                <a
+                  href="https://groups.google.com/g/testgrubutr"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="text-indigo-700 underline underline-offset-2 hover:text-indigo-900"
+                >
+                  testgrubutr
+                </a>
+              </li>
+            </ul>
+            <p className="text-gray-600">
+              Google Grup mantığı: Play Console içinde tester olarak grup e-posta adresi tanımlanır;
+              gruba katılan herkes tek tek ekleme yapmadan otomatik olarak teste erişebilir.
+            </p>
+          </CardContent>
+        </Card>
 
         <PublicAppsBoard
           apps={serializedApps}
