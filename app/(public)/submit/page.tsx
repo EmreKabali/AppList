@@ -212,7 +212,7 @@ export default function SubmitPage() {
               {error && <p className="text-sm text-red-500">{error}</p>}
 
               {success && (
-                <p className="text-sm text-green-600">Ekleme başarılı, Onaya gönderildi</p>
+                <p className="text-sm text-green-600">Ekleme başarılı, doğrudan onaylandı</p>
               )}
 
               <div className="flex gap-3">

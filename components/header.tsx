@@ -18,9 +18,11 @@ export function Header() {
           </Link>
 
           <nav className="flex items-center space-x-3">
-            <Link href="/submit">
-              <Button variant="primary" className="shadow-lg shadow-indigo-500/20 hover:shadow-indigo-500/40 transition-all hover:-translate-y-0.5 active:translate-y-0">App Gonder</Button>
-            </Link>
+            {session?.user && (
+              <Link href="/submit">
+                <Button variant="primary" className="shadow-lg shadow-indigo-500/20 hover:shadow-indigo-500/40 transition-all hover:-translate-y-0.5 active:translate-y-0">App Gonder</Button>
+              </Link>
+            )}
 
             {session?.user ? (
               <>

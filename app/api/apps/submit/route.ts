@@ -11,6 +11,14 @@ function isValidPlatform(value: unknown): value is "android" | "ios" {
 export async function POST(request: Request) {
   try {
     const session = await getSessionContext();
+
+    if (!session?.userId) {
+      return NextResponse.json<ApiResponse>(
+        { success: false, error: "Bu işlem için giriş yapmalısınız" },
+        { status: 401 }
+      );
+    }
+
     const body = await request.json();
 
     const {
@@ -69,27 +77,6 @@ export async function POST(request: Request) {
       );
     }
 
-    // If user is authenticated, use their ID. Otherwise create as anonymous.
-    let creatorId = session?.userId;
-
-    if (!creatorId) {
-      // Create or get anonymous user for unauthenticated submissions
-      let anonUser = await prisma.user.findUnique({
-        where: { email: "anonymous@applist.com" },
-      });
-      if (!anonUser) {
-        anonUser = await prisma.user.create({
-          data: {
-            email: "anonymous@applist.com",
-            name: "Anonymous",
-            password: "",
-            role: "user",
-          },
-        });
-      }
-      creatorId = anonUser.id;
-    }
-
     const data = await prisma.app.create({
       data: {
         name,
@@ -101,8 +88,8 @@ export async function POST(request: Request) {
         iconUrl: iconUrlVal || null,
         startDate: startDateVal ?? null,
         endDate: endDateVal ?? null,
-        status: subType === "test" ? APP_STATUS.APPROVED : APP_STATUS.PENDING,
-        createdBy: creatorId,
+        status: APP_STATUS.APPROVED,
+        createdBy: session.userId,
       },
     });
 

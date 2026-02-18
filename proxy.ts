@@ -24,6 +24,14 @@ export async function proxy(request: NextRequest) {
     return NextResponse.next();
   }
 
+  // Submit route: require authenticated user
+  if (pathname.startsWith("/submit")) {
+    if (!session?.user) {
+      return NextResponse.redirect(new URL("/login", request.url));
+    }
+    return NextResponse.next();
+  }
+
   // Auth pages: redirect if already logged in
   if (pathname === "/login" || pathname === "/register") {
     if (session?.user) {
