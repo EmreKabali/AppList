@@ -148,7 +148,10 @@ export default function DashboardPage() {
     const response = await updateUserApp(editingAppId, {
       name: editForm.name.trim(),
       submissionType: editForm.submissionType,
-      platform: editForm.submissionType === "live" ? editForm.platform : null,
+      platform:
+        editForm.submissionType === "live"
+          ? editForm.platform || null
+          : null,
       playUrl: editForm.submissionType === "live" ? editForm.playUrl || null : null,
       testUrl: editForm.testUrl.trim(),
     });
