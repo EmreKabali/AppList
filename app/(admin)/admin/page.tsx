@@ -15,7 +15,10 @@ const statusLabels: Record<string, string> = {
   rejected: "Reddedildi",
 };
 
-const statusVariants: Record<string, "default" | "success" | "warning" | "danger"> = {
+const statusVariants: Record<
+  string,
+  "default" | "success" | "warning" | "danger"
+> = {
   pending: "warning",
   approved: "success",
   rejected: "danger",
@@ -32,7 +35,10 @@ export default async function AdminDashboardPage({
   searchParams: Promise<{ q?: string }>;
 }>) {
   const adminContext = await getSessionContext();
-  if (!adminContext || (adminContext.role !== "admin" && adminContext.role !== "super_admin")) {
+  if (
+    !adminContext ||
+    (adminContext.role !== "admin" && adminContext.role !== "super_admin")
+  ) {
     redirect("/login");
   }
 
@@ -44,7 +50,12 @@ export default async function AdminDashboardPage({
   const expiringLimitIso = expiringLimit.toISOString().slice(0, 10);
 
   const searchFilter = query
-    ? { OR: [{ name: { contains: query } }, { description: { contains: query } }] }
+    ? {
+        OR: [
+          { name: { contains: query } },
+          { description: { contains: query } },
+        ],
+      }
     : {};
 
   const [
@@ -82,7 +93,22 @@ export default async function AdminDashboardPage({
         ...searchFilter,
       },
       orderBy: { createdAt: "desc" },
-      include: {
+      take: 50,
+      select: {
+        id: true,
+        name: true,
+        submissionType: true,
+        platform: true,
+        playUrl: true,
+        testUrl: true,
+        description: true,
+        iconUrl: true,
+        startDate: true,
+        endDate: true,
+        status: true,
+        createdBy: true,
+        createdAt: true,
+        updatedAt: true,
         _count: { select: { testRequests: true } },
       },
     }),
@@ -121,11 +147,28 @@ export default async function AdminDashboardPage({
       <header className="bg-white border-b border-gray-200">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex items-center justify-between h-16">
-            <Link href="/" className="text-xl font-bold text-indigo-600">AppList</Link>
+            <Link href="/" className="text-xl font-bold text-indigo-600">
+              AppList
+            </Link>
             <nav className="flex items-center space-x-4">
-              <Link href="/admin" className="text-sm text-gray-600 hover:text-gray-900">Panel</Link>
-              <Link href="/admin/apps" className="text-sm text-gray-600 hover:text-gray-900">Uygulamalar</Link>
-              <Link href="/admin/users" className="text-sm text-gray-600 hover:text-gray-900">Kullanıcılar</Link>
+              <Link
+                href="/admin"
+                className="text-sm text-gray-600 hover:text-gray-900"
+              >
+                Panel
+              </Link>
+              <Link
+                href="/admin/apps"
+                className="text-sm text-gray-600 hover:text-gray-900"
+              >
+                Uygulamalar
+              </Link>
+              <Link
+                href="/admin/users"
+                className="text-sm text-gray-600 hover:text-gray-900"
+              >
+                Kullanıcılar
+              </Link>
               <AdminLogoutButton className="text-sm text-indigo-600 hover:text-indigo-800" />
             </nav>
           </div>
@@ -136,9 +179,15 @@ export default async function AdminDashboardPage({
           <h1 className="text-3xl font-bold text-gray-900">Admin Paneli</h1>
           <p className="text-gray-600 mt-1">Genel bakış ve istatistikler</p>
 
-          <form method="GET" className="mt-4 flex flex-col gap-3 md:flex-row md:items-end">
+          <form
+            method="GET"
+            className="mt-4 flex flex-col gap-3 md:flex-row md:items-end"
+          >
             <div className="w-full md:max-w-md">
-              <label htmlFor="dashboard-search" className="block text-sm font-medium text-gray-700 mb-1.5">
+              <label
+                htmlFor="dashboard-search"
+                className="block text-sm font-medium text-gray-700 mb-1.5"
+              >
                 Arama
               </label>
               <input
@@ -168,10 +217,26 @@ export default async function AdminDashboardPage({
         </div>
 
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
-          <StatsCard value={stats.total} label="Toplam Uygulama" href={getAppsHref()} />
-          <StatsCard value={stats.pending} label="Bekleyen" href={getAppsHref("pending")} />
-          <StatsCard value={stats.approved} label="Onaylanan" href={getAppsHref("approved")} />
-          <StatsCard value={stats.rejected} label="Reddedilen" href={getAppsHref("rejected")} />
+          <StatsCard
+            value={stats.total}
+            label="Toplam Uygulama"
+            href={getAppsHref()}
+          />
+          <StatsCard
+            value={stats.pending}
+            label="Bekleyen"
+            href={getAppsHref("pending")}
+          />
+          <StatsCard
+            value={stats.approved}
+            label="Onaylanan"
+            href={getAppsHref("approved")}
+          />
+          <StatsCard
+            value={stats.rejected}
+            label="Reddedilen"
+            href={getAppsHref("rejected")}
+          />
         </div>
 
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
@@ -186,21 +251,38 @@ export default async function AdminDashboardPage({
               <CardContent>
                 {recentApps.length === 0 ? (
                   <p className="text-gray-500 text-sm">
-                    {query ? "Aramaya uygun başvuru bulunmuyor" : "Başvuru bulunmuyor"}
+                    {query
+                      ? "Aramaya uygun başvuru bulunmuyor"
+                      : "Başvuru bulunmuyor"}
                   </p>
                 ) : (
                   <div className="space-y-3">
                     {recentApps.map((app) => (
-                      <div key={app.id} className="flex items-center justify-between">
+                      <div
+                        key={app.id}
+                        className="flex items-center justify-between"
+                      >
                         <div className="min-w-0">
-                          <p className="text-sm font-medium truncate">{app.name}</p>
-                          <p className="text-xs text-gray-500">{submissionTypeLabels[app.submissionType]}</p>
+                          <p className="text-sm font-medium truncate">
+                            {app.name}
+                          </p>
+                          <p className="text-xs text-gray-500">
+                            {submissionTypeLabels[app.submissionType]}
+                          </p>
                         </div>
                         <div className="flex items-center gap-2">
-                          <Badge variant={app.submissionType === "live" ? "success" : "warning"}>
+                          <Badge
+                            variant={
+                              app.submissionType === "live"
+                                ? "success"
+                                : "warning"
+                            }
+                          >
                             {submissionTypeLabels[app.submissionType]}
                           </Badge>
-                          <Badge variant={statusVariants[app.status] || "default"}>
+                          <Badge
+                            variant={statusVariants[app.status] || "default"}
+                          >
                             {statusLabels[app.status] || app.status}
                           </Badge>
                         </div>
@@ -223,15 +305,22 @@ export default async function AdminDashboardPage({
               <CardContent>
                 {expiringApps.length === 0 ? (
                   <p className="text-gray-500 text-sm">
-                    {query ? "Aramaya uygun yakında bitecek uygulama yok" : "Yakinda bitecek uygulama yok"}
+                    {query
+                      ? "Aramaya uygun yakında bitecek uygulama yok"
+                      : "Yakinda bitecek uygulama yok"}
                   </p>
                 ) : (
                   <div className="space-y-3">
                     {expiringApps.map((app) => (
-                      <div key={app.id} className="flex items-center justify-between">
+                      <div
+                        key={app.id}
+                        className="flex items-center justify-between"
+                      >
                         <span className="text-sm font-medium">{app.name}</span>
                         <span className="text-xs text-gray-500">
-                          {app.endDate ? new Date(app.endDate).toLocaleDateString("tr-TR") : "-"}
+                          {app.endDate
+                            ? new Date(app.endDate).toLocaleDateString("tr-TR")
+                            : "-"}
                         </span>
                       </div>
                     ))}

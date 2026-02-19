@@ -5,38 +5,47 @@ import type { ApiResponse } from "@/types";
 
 export async function POST(
   request: Request,
-  { params }: { params: Promise<{ id: string }> }
+  { params }: { params: Promise<{ id: string }> },
 ) {
   try {
     const context = await getSessionContext();
     if (!context) {
       return NextResponse.json<ApiResponse>(
         { success: false, error: "Unauthorized" },
-        { status: 401 }
+        { status: 401 },
       );
     }
 
     const { id } = await params;
 
-    const app = await prisma.app.findUnique({ where: { id } });
+    const app = await prisma.app.findUnique({
+      where: { id },
+      select: { id: true, submissionType: true, createdBy: true },
+    });
     if (!app) {
       return NextResponse.json<ApiResponse>(
         { success: false, error: "Uygulama bulunamadı" },
-        { status: 404 }
+        { status: 404 },
       );
     }
 
     if (app.submissionType !== "test") {
       return NextResponse.json<ApiResponse>(
-        { success: false, error: "Sadece test uygulamalarına tester olunabilir" },
-        { status: 400 }
+        {
+          success: false,
+          error: "Sadece test uygulamalarına tester olunabilir",
+        },
+        { status: 400 },
       );
     }
 
     if (app.createdBy === context.userId) {
       return NextResponse.json<ApiResponse>(
-        { success: false, error: "Kendi uygulamanıza tester olarak eklenemezsiniz" },
-        { status: 400 }
+        {
+          success: false,
+          error: "Kendi uygulamanıza tester olarak eklenemezsiniz",
+        },
+        { status: 400 },
       );
     }
 
@@ -47,7 +56,7 @@ export async function POST(
     if (existing) {
       return NextResponse.json<ApiResponse>(
         { success: false, error: "Zaten tester olarak kayıtlısınız" },
-        { status: 400 }
+        { status: 400 },
       );
     }
 
@@ -60,26 +69,26 @@ export async function POST(
 
     return NextResponse.json<ApiResponse>(
       { success: true, data: testRequest },
-      { status: 201 }
+      { status: 201 },
     );
   } catch {
     return NextResponse.json<ApiResponse>(
       { success: false, error: "Internal server error" },
-      { status: 500 }
+      { status: 500 },
     );
   }
 }
 
 export async function DELETE(
   request: Request,
-  { params }: { params: Promise<{ id: string }> }
+  { params }: { params: Promise<{ id: string }> },
 ) {
   try {
     const context = await getSessionContext();
     if (!context) {
       return NextResponse.json<ApiResponse>(
         { success: false, error: "Unauthorized" },
-        { status: 401 }
+        { status: 401 },
       );
     }
 
@@ -92,7 +101,7 @@ export async function DELETE(
     if (!existing) {
       return NextResponse.json<ApiResponse>(
         { success: false, error: "Tester kaydı bulunamadı" },
-        { status: 404 }
+        { status: 404 },
       );
     }
 
@@ -104,7 +113,7 @@ export async function DELETE(
   } catch {
     return NextResponse.json<ApiResponse>(
       { success: false, error: "Internal server error" },
-      { status: 500 }
+      { status: 500 },
     );
   }
 }

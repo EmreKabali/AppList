@@ -9,15 +9,32 @@ export async function GET() {
     if (!context) {
       return NextResponse.json<ApiResponse>(
         { success: false, error: "Unauthorized" },
-        { status: 401 }
+        { status: 401 },
       );
     }
 
     const testRequests = await prisma.testRequest.findMany({
       where: { userId: context.userId },
       orderBy: { createdAt: "desc" },
-      include: {
-        app: true,
+      take: 50,
+      select: {
+        id: true,
+        appId: true,
+        userId: true,
+        createdAt: true,
+        app: {
+          select: {
+            id: true,
+            name: true,
+            submissionType: true,
+            platform: true,
+            testUrl: true,
+            iconUrl: true,
+            startDate: true,
+            endDate: true,
+            status: true,
+          },
+        },
       },
     });
 
@@ -28,7 +45,7 @@ export async function GET() {
   } catch {
     return NextResponse.json<ApiResponse>(
       { success: false, error: "Internal server error" },
-      { status: 500 }
+      { status: 500 },
     );
   }
 }

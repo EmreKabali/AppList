@@ -10,7 +10,7 @@ export async function POST(request: Request) {
     if (!context) {
       return NextResponse.json<ApiResponse>(
         { success: false, error: "Unauthorized" },
-        { status: 401 }
+        { status: 401 },
       );
     }
 
@@ -20,25 +20,26 @@ export async function POST(request: Request) {
     if (!currentPassword || !newPassword) {
       return NextResponse.json<ApiResponse>(
         { success: false, error: "Mevcut şifre ve yeni şifre gereklidir" },
-        { status: 400 }
+        { status: 400 },
       );
     }
 
     if (newPassword.length < 8) {
       return NextResponse.json<ApiResponse>(
         { success: false, error: "Yeni şifre en az 8 karakter olmalıdır" },
-        { status: 400 }
+        { status: 400 },
       );
     }
 
     const user = await prisma.user.findUnique({
       where: { id: context.userId },
+      select: { id: true, password: true },
     });
 
     if (!user) {
       return NextResponse.json<ApiResponse>(
         { success: false, error: "Kullanıcı bulunamadı" },
-        { status: 404 }
+        { status: 404 },
       );
     }
 
@@ -46,7 +47,7 @@ export async function POST(request: Request) {
     if (!isValid) {
       return NextResponse.json<ApiResponse>(
         { success: false, error: "Mevcut şifre hatalı" },
-        { status: 400 }
+        { status: 400 },
       );
     }
 
@@ -64,7 +65,7 @@ export async function POST(request: Request) {
   } catch {
     return NextResponse.json<ApiResponse>(
       { success: false, error: "Internal server error" },
-      { status: 500 }
+      { status: 500 },
     );
   }
 }

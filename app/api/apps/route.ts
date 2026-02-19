@@ -11,10 +11,7 @@ export async function GET(request: Request) {
 
   try {
     const visibilityFilter: Prisma.AppWhereInput = {
-      OR: [
-        { status: "approved" },
-        { submissionType: "test" },
-      ],
+      OR: [{ status: "approved" }, { submissionType: "test" }],
     };
 
     const [apps, count] = await Promise.all([
@@ -23,7 +20,21 @@ export async function GET(request: Request) {
         orderBy: { createdAt: "desc" },
         skip,
         take: limit,
-        include: {
+        select: {
+          id: true,
+          name: true,
+          submissionType: true,
+          platform: true,
+          playUrl: true,
+          testUrl: true,
+          description: true,
+          iconUrl: true,
+          startDate: true,
+          endDate: true,
+          status: true,
+          createdBy: true,
+          createdAt: true,
+          updatedAt: true,
           _count: { select: { testRequests: true } },
         },
       }),
@@ -43,7 +54,7 @@ export async function GET(request: Request) {
   } catch {
     return NextResponse.json<ApiResponse>(
       { success: false, error: "Internal server error" },
-      { status: 500 }
+      { status: 500 },
     );
   }
 }

@@ -29,10 +29,13 @@ export async function GET(request: Request) {
 
   try {
     const context = await getSessionContext();
-    if (!context || (context.role !== "admin" && context.role !== "super_admin")) {
+    if (
+      !context ||
+      (context.role !== "admin" && context.role !== "super_admin")
+    ) {
       return NextResponse.json<ApiResponse>(
         { success: false, error: "Unauthorized" },
-        { status: 401 }
+        { status: 401 },
       );
     }
 
@@ -64,7 +67,21 @@ export async function GET(request: Request) {
         orderBy: { createdAt: "desc" },
         skip,
         take: limit,
-        include: {
+        select: {
+          id: true,
+          name: true,
+          submissionType: true,
+          platform: true,
+          playUrl: true,
+          testUrl: true,
+          description: true,
+          iconUrl: true,
+          startDate: true,
+          endDate: true,
+          status: true,
+          createdBy: true,
+          createdAt: true,
+          updatedAt: true,
           _count: { select: { testRequests: true } },
         },
       }),
@@ -84,7 +101,7 @@ export async function GET(request: Request) {
   } catch {
     return NextResponse.json<ApiResponse>(
       { success: false, error: "Internal server error" },
-      { status: 500 }
+      { status: 500 },
     );
   }
 }
@@ -92,10 +109,13 @@ export async function GET(request: Request) {
 export async function PATCH(request: Request) {
   try {
     const context = await getSessionContext();
-    if (!context || (context.role !== "admin" && context.role !== "super_admin")) {
+    if (
+      !context ||
+      (context.role !== "admin" && context.role !== "super_admin")
+    ) {
       return NextResponse.json<ApiResponse>(
         { success: false, error: "Unauthorized" },
-        { status: 401 }
+        { status: 401 },
       );
     }
 
@@ -105,7 +125,7 @@ export async function PATCH(request: Request) {
     if (!id) {
       return NextResponse.json<ApiResponse>(
         { success: false, error: "Missing required field: id" },
-        { status: 400 }
+        { status: 400 },
       );
     }
 
@@ -115,18 +135,21 @@ export async function PATCH(request: Request) {
       if (!Object.values(APP_STATUS).includes(body.status as AppStatus)) {
         return NextResponse.json<ApiResponse>(
           { success: false, error: "Invalid status value" },
-          { status: 400 }
+          { status: 400 },
         );
       }
       updates.status = body.status;
     }
 
-    if (body.submissionType !== undefined || body.submission_type !== undefined) {
+    if (
+      body.submissionType !== undefined ||
+      body.submission_type !== undefined
+    ) {
       const st = body.submissionType ?? body.submission_type;
       if (!isValidSubmissionType(st)) {
         return NextResponse.json<ApiResponse>(
           { success: false, error: "submissionType must be live or test" },
-          { status: 400 }
+          { status: 400 },
         );
       }
       updates.submissionType = st;
@@ -136,7 +159,7 @@ export async function PATCH(request: Request) {
       if (body.platform !== null && !isValidPlatform(body.platform)) {
         return NextResponse.json<ApiResponse>(
           { success: false, error: "platform must be android, ios, or null" },
-          { status: 400 }
+          { status: 400 },
         );
       }
       updates.platform = body.platform;
@@ -146,7 +169,7 @@ export async function PATCH(request: Request) {
       if (typeof body.name !== "string" || body.name.trim().length === 0) {
         return NextResponse.json<ApiResponse>(
           { success: false, error: "name cannot be empty" },
-          { status: 400 }
+          { status: 400 },
         );
       }
       updates.name = body.name.trim();
@@ -169,7 +192,7 @@ export async function PATCH(request: Request) {
         if (body[bodyKey] !== null && typeof body[bodyKey] !== "string") {
           return NextResponse.json<ApiResponse>(
             { success: false, error: `${bodyKey} must be string or null` },
-            { status: 400 }
+            { status: 400 },
           );
         }
         updates[prismaKey] = body[bodyKey];
@@ -183,7 +206,7 @@ export async function PATCH(request: Request) {
     ) {
       return NextResponse.json<ApiResponse>(
         { success: false, error: "test submissionType cannot have a platform" },
-        { status: 400 }
+        { status: 400 },
       );
     }
 
@@ -197,7 +220,7 @@ export async function PATCH(request: Request) {
     if (Object.keys(updates).length === 0) {
       return NextResponse.json<ApiResponse>(
         { success: false, error: "No updatable fields were provided" },
-        { status: 400 }
+        { status: 400 },
       );
     }
 
@@ -210,7 +233,7 @@ export async function PATCH(request: Request) {
   } catch {
     return NextResponse.json<ApiResponse>(
       { success: false, error: "Internal server error" },
-      { status: 500 }
+      { status: 500 },
     );
   }
 }
@@ -218,10 +241,13 @@ export async function PATCH(request: Request) {
 export async function DELETE(request: Request) {
   try {
     const context = await getSessionContext();
-    if (!context || (context.role !== "admin" && context.role !== "super_admin")) {
+    if (
+      !context ||
+      (context.role !== "admin" && context.role !== "super_admin")
+    ) {
       return NextResponse.json<ApiResponse>(
         { success: false, error: "Unauthorized" },
-        { status: 401 }
+        { status: 401 },
       );
     }
 
@@ -231,7 +257,7 @@ export async function DELETE(request: Request) {
     if (!id) {
       return NextResponse.json<ApiResponse>(
         { success: false, error: "Missing required query param: id" },
-        { status: 400 }
+        { status: 400 },
       );
     }
 
@@ -241,7 +267,7 @@ export async function DELETE(request: Request) {
   } catch {
     return NextResponse.json<ApiResponse>(
       { success: false, error: "Internal server error" },
-      { status: 500 }
+      { status: 500 },
     );
   }
 }

@@ -17,17 +17,33 @@ export async function GET() {
     if (!context) {
       return NextResponse.json<ApiResponse>(
         { success: false, error: "Unauthorized" },
-        { status: 401 }
+        { status: 401 },
       );
     }
 
     const apps = await prisma.app.findMany({
       where: { createdBy: context.userId },
       orderBy: { createdAt: "desc" },
-      include: {
+      take: 50,
+      select: {
+        id: true,
+        name: true,
+        submissionType: true,
+        platform: true,
+        playUrl: true,
+        testUrl: true,
+        description: true,
+        iconUrl: true,
+        startDate: true,
+        endDate: true,
+        status: true,
+        createdBy: true,
+        createdAt: true,
+        updatedAt: true,
         _count: { select: { testRequests: true } },
         testRequests: {
           orderBy: { createdAt: "desc" },
+          take: 20,
           select: {
             id: true,
             createdAt: true,
@@ -50,7 +66,7 @@ export async function GET() {
   } catch {
     return NextResponse.json<ApiResponse>(
       { success: false, error: "Internal server error" },
-      { status: 500 }
+      { status: 500 },
     );
   }
 }
@@ -61,7 +77,7 @@ export async function PATCH(request: Request) {
     if (!context) {
       return NextResponse.json<ApiResponse>(
         { success: false, error: "Unauthorized" },
-        { status: 401 }
+        { status: 401 },
       );
     }
 
@@ -71,7 +87,7 @@ export async function PATCH(request: Request) {
     if (!id || typeof id !== "string") {
       return NextResponse.json<ApiResponse>(
         { success: false, error: "Missing required field: id" },
-        { status: 400 }
+        { status: 400 },
       );
     }
 
@@ -83,7 +99,7 @@ export async function PATCH(request: Request) {
     if (!existingApp) {
       return NextResponse.json<ApiResponse>(
         { success: false, error: "Uygulama bulunamadı" },
-        { status: 404 }
+        { status: 404 },
       );
     }
 
@@ -93,18 +109,21 @@ export async function PATCH(request: Request) {
       if (typeof body.name !== "string" || body.name.trim().length === 0) {
         return NextResponse.json<ApiResponse>(
           { success: false, error: "name cannot be empty" },
-          { status: 400 }
+          { status: 400 },
         );
       }
       updates.name = body.name.trim();
     }
 
-    if (body.submissionType !== undefined || body.submission_type !== undefined) {
+    if (
+      body.submissionType !== undefined ||
+      body.submission_type !== undefined
+    ) {
       const submissionType = body.submissionType ?? body.submission_type;
       if (!isSubmissionType(submissionType)) {
         return NextResponse.json<ApiResponse>(
           { success: false, error: "submissionType must be live or test" },
-          { status: 400 }
+          { status: 400 },
         );
       }
       updates.submissionType = submissionType;
@@ -114,7 +133,7 @@ export async function PATCH(request: Request) {
       if (body.platform !== null && !isPlatform(body.platform)) {
         return NextResponse.json<ApiResponse>(
           { success: false, error: "platform must be android, ios, or null" },
-          { status: 400 }
+          { status: 400 },
         );
       }
       updates.platform = body.platform;
@@ -139,7 +158,7 @@ export async function PATCH(request: Request) {
         if (body[bodyKey] !== null && typeof body[bodyKey] !== "string") {
           return NextResponse.json<ApiResponse>(
             { success: false, error: `${bodyKey} must be string or null` },
-            { status: 400 }
+            { status: 400 },
           );
         }
         updates[prismaKey] = body[bodyKey];
@@ -160,15 +179,18 @@ export async function PATCH(request: Request) {
       updates.platform === null
     ) {
       return NextResponse.json<ApiResponse>(
-        { success: false, error: "live submissionType için platform zorunludur" },
-        { status: 400 }
+        {
+          success: false,
+          error: "live submissionType için platform zorunludur",
+        },
+        { status: 400 },
       );
     }
 
     if (Object.keys(updates).length === 0) {
       return NextResponse.json<ApiResponse>(
         { success: false, error: "No updatable fields were provided" },
-        { status: 400 }
+        { status: 400 },
       );
     }
 
@@ -198,7 +220,7 @@ export async function PATCH(request: Request) {
   } catch {
     return NextResponse.json<ApiResponse>(
       { success: false, error: "Internal server error" },
-      { status: 500 }
+      { status: 500 },
     );
   }
 }
